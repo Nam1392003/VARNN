@@ -333,8 +333,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
             st.session_state.button_clicked = True
         if st.session_state.button_clicked:
             start_train_time = time.time()
-            var_model,forecast,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_var,st.session_state.mae_var,st.session_state.cv_rmse_var=v.train_VAR(train_data,test_data,lag)
-       
+            var_model, forecast, st.session_state.y_test, st.session_state.y_test_pre,st.session_state.mse_var,st.session_state.mae_var,st.session_state.cv_rmse_var,pred_var=v.train_VAR(train_data,test_data,lag)
             st.session_state.forecast=forecast                     
             end_train_time = time.time()
             train_time=end_train_time-start_train_time

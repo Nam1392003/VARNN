@@ -149,13 +149,6 @@ def find_lag(train_data):
     # Tìm độ trễ tốt nhất dựa trên AIC
     best_aic_lag = aic_df.loc[aic_df['AIC'].idxmin()]
     lag = int(best_aic_lag["Lag"])
-    #plt.figure(figsize=(10, 6))
-    #plt.plot(aic_df['Lag'], aic_df['AIC'], marker='o', color='red', label='AIC')
-    #plt.xlabel('Lag')
-    #plt.ylabel('AIC')
-    #plt.title('AIC Scores for Different Lags in VAR')
-    #plt.legend()
-    #plt.grid()
     return lag
 
 def train_VAR(train_data,test_data,lag):
@@ -163,8 +156,6 @@ def train_VAR(train_data,test_data,lag):
     var_model = VAR(train_data)
     var_result = var_model.fit(maxlags=lag)
     pred_var = var_result.fittedvalues
-    # Dự đoán trên tập kiểm tra
-    # Sử dụng phương thức forecast với giá trị cuối cùng của chuỗi huấn luyện
     y_test_pre = var_result.forecast(train_data.values[-lag:], steps=len(test_data))
 
     # Tính toán các chỉ số đánh giá
@@ -180,14 +171,14 @@ def train_VAR(train_data,test_data,lag):
     mean_y_test = np.mean(y_test)
     cv_rmse_var = (rmse_var / mean_y_test) * 100
 
-    return [var_result,forecast,y_test,y_test_pre,mse_var,mae_var,cv_rmse_var]
+    return [var_result,forecast,y_test,y_test_pre,mse_var,mae_var,cv_rmse_var,pred_var]
 
 def prepare_data_for_ffnn(train_data,test_data,lag):
     # Chuẩn bị dữ liệu cho FFNN
     #train_data = train_data.astype(np.float32)
     #test_data = test_data.astype(np.float32)
     X_train = np.array([train_data.values[i:i+lag] for i in range(len(train_data)-lag)])
-    forecast,pred_var,y_test_pre,mse_var,mae_var,mape_var = train_VAR(train_data,test_data,lag)
+    var_result,forecast,y_test,y_test_pre,mse_var,mae_var,cv_rmse_var,pred_var = train_VAR(train_data,test_data,lag)
     y_train=pred_var
     return [X_train,y_train]
 
@@ -241,7 +232,7 @@ def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size):
     varnn_model.compile(optimizer='adam', loss='mse')
 
     X_train,y_train=prepare_data_for_ffnn(train_data,test_data,lag)
-    early_stopping = EarlyStopping(monitor='val_loss', patience=30, restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor='val_loss', patience=40, restore_best_weights=True)
     history=varnn_model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size,validation_split=0.2, verbose=1,callbacks=[early_stopping])
 
     X_test = np.array([test_data.values[i:i+lag] for i in range(len(test_data)-lag)])
