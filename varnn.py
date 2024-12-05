@@ -96,7 +96,6 @@ def is_exponential_growth(series):
         return is_trend(log_series)  # Kiểm tra xu hướng tuyến tính trên log
     except:
         return False
-
     
 def Min_max_scaler(data,min,max):
     # Khởi tạo scaler
@@ -150,6 +149,13 @@ def find_lag(train_data):
     # Tìm độ trễ tốt nhất dựa trên AIC
     best_aic_lag = aic_df.loc[aic_df['AIC'].idxmin()]
     lag = int(best_aic_lag["Lag"])
+    #plt.figure(figsize=(10, 6))
+    #plt.plot(aic_df['Lag'], aic_df['AIC'], marker='o', color='red', label='AIC')
+    #plt.xlabel('Lag')
+    #plt.ylabel('AIC')
+    #plt.title('AIC Scores for Different Lags in VAR')
+    #plt.legend()
+    #plt.grid()
     return lag
 
 def train_VAR(train_data,test_data,lag):
@@ -228,13 +234,14 @@ def find_parameter_for_ffnn(train_data,test_data, ratio_train_val,lag):
 
 # Với y dự đoán từ mô hình VAR đưa vào FFNN để train mô hình
 def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size):
+    
     varnn_model = Sequential()
     varnn_model.add(LSTM(lstm_unit, activation='relu', input_shape=(lag, train_data.shape[1])))
     varnn_model.add(Dense(train_data.shape[1]))
     varnn_model.compile(optimizer='adam', loss='mse')
 
     X_train,y_train=prepare_data_for_ffnn(train_data,test_data,lag)
-    early_stopping = EarlyStopping(monitor='val_loss', patience=40, restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor='val_loss', patience=30, restore_best_weights=True)
     history=varnn_model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size,validation_split=0.2, verbose=1,callbacks=[early_stopping])
 
     X_test = np.array([test_data.values[i:i+lag] for i in range(len(test_data)-lag)])
@@ -282,3 +289,4 @@ def train_ffnn(train_data,test_data, lag,epochs,lstm_unit,batch_size):
 #data=tranformation(data)
 #data=chuanhoachuoidung(data)
 #print(data)
+

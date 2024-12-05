@@ -1,3 +1,4 @@
 [{"epochs": 300, "batch_size": 64, "lstm_units": 73},
 {"epochs": 256, "batch_size": 32, "lstm_units": 92},
-{"epochs": 207, "batch_size": 16, "lstm_units": 70}]
+{"epochs": 207, "batch_size": 16, "lstm_units": 70},
+{"epochs": 230, "batch_size": 16, "lstm_units": 45}]

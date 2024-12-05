@@ -92,7 +92,6 @@ def get_ratio_train_test():
     st.sidebar.write(f"Tỉ lệ phần trăm tập train là: {percentage_train}%")
     st.sidebar.write(f"Tỉ lệ phần trăm tập test là: {percentage_test}%")
     return percentage_test/100
-
 def get_option_min_max():
     st.sidebar.write("Nhập giá trị min, max")
     col1, col2 = st.sidebar.columns(2)
@@ -110,8 +109,7 @@ def get_option_min_max():
         return min_val, max_val
     except ValueError:
         st.error("Giá trị nhập vào phải là số nguyên.")
-        return -1, 1  # Giá trị mặc định khi lỗi xảy ra
-    
+        return 0, 1  # Giá trị mặc định khi lỗi xảy ra
 def get_ratio_val():
     st.sidebar.header("Chia tỉ lệ train val", divider='rainbow')
     # Tạo thanh trượt để chọn tỉ lệ phần trăm
@@ -128,7 +126,6 @@ def get_ratio_val():
     st.sidebar.write(f"Tỉ lệ phần trăm tập train là: {percentage_train}%")
     st.sidebar.write(f"Tỉ lệ phần trăm tập val là: {percentage_val}%")
     return percentage_val/100
-
 def get_option_column_to_draw(data):
     st.sidebar.header("Chọn cột",  divider='rainbow')
     column_name=data.columns
@@ -248,10 +245,9 @@ def get_option_display_df_chuan_hoa():
 @st.cache_data
 def draw(data,column):
     fig, ax = plt.subplots(figsize=(15, 5))
-    
     fig, ax = plt.subplots(figsize=(15, 5))
     ax.plot(data.index, data[column], label=column, color='blue')
-    ax.set_title(f"{column} Over Time", fontsize=14)
+    ax.set_title(f"{column} Over Time (Sampled)", fontsize=14)
     ax.set_xlabel("Date Time")
     ax.set_ylabel(column)
     ax.grid()
@@ -292,7 +288,8 @@ def draw_df_chuan_hoa(data,column):
     data = data.iloc[::6]
     fig, ax = plt.subplots(figsize=(15, 5))
     ax.plot(data.index, data[column], label=column, color='blue')
-    ax.set_title(f"{column} Over Time (Sampled)", fontsize=14)
+    ax.set_title(f"{column} Over Time", fontsize=14)
+    #ax.set_xlabel("Date Time")
     ax.set_ylabel(column)
     ax.grid()
     ax.legend()
@@ -371,12 +368,15 @@ def train_model(df_chuan_hoa,scaler,op_data):
                     #st.session_state["df"]=v.get_data_target(df_chuan_hoa).columns
                     data=pd.DataFrame(st.session_state.forecast)
                     data.columns=df_chuan_hoa.columns
+            
                     st.dataframe(data.reset_index(drop=True))
-                    
+            
     elif model=="VARNN" or model=="FFNN":
-        ratio_train_val=get_ratio_val() 
+        ratio_train_val=get_ratio_val()
+        #lstm_unit, epochs, batch_size = None, None, None  # Giá trị mặc định
+        
         if st.sidebar.button("Tìm tham số tối ưu"):
-            #lstm_unit, epochs, batch_size = None, None, None  # Giá trị mặc định
+            #st.session_state.lstm_unit, st.session_state.epochs, st.session_state.batch_size=v.find_parameter_for_ffnn(train_data,test_data,ratio_train_val,lag)
             lstm_unit = None
             epochs = None
             batch_size = None
@@ -460,6 +460,9 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 st.write(f"Số epochs hoàn thành: {len(history.history['loss'])}")
                 st.write(f"Validation Loss cuối cùng: {history.history['val_loss'][-1]:.4f}")  
                 
+                #st.dataframe(y_test)
+                #st.header("Kiểm tra mô hình varnn:", divider='rainbow')
+                
                 if op == "Không chuẩn hóa":
                     y_test=pd.DataFrame(st.session_state.y_test)
                     y_test_pre=pd.DataFrame(st.session_state.y_test_pre)
@@ -507,6 +510,10 @@ def train_model(df_chuan_hoa,scaler,op_data):
 
                 history,latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_ffnn, st.session_state.mae_ffnn, st.session_state.cv_rmse_ffnn=v.train_ffnn(train_data,test_data,lag,epochs,lstm_unit,batch_size)
                 st.session_state.latest_prediction=latest_prediction
+                #y_test=pd.DataFrame(st.session_state.y_test)
+                #y_test_pre=pd.DataFrame(st.session_state.y_test_pre)
+                #y_test.columns=df_chuan_hoa.columns
+                #y_test_pre.columns=df_chuan_hoa.columns
                 
                 end_train_time = time.time()
 
@@ -527,7 +534,9 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 st.write(f"Loss cuối cùng: {history.history['loss'][-1]:.4f}")
                 st.write(f"Số epochs hoàn thành: {len(history.history['loss'])}")
                 st.write(f"Validation Loss cuối cùng: {history.history['val_loss'][-1]:.4f}")  
-
+                
+                #st.dataframe(y_test)
+                #st.header("Kiểm tra mô hình ffnn:", divider='rainbow')
                 if op == "Không chuẩn hóa":
                     y_test=pd.DataFrame(st.session_state.y_test)
                     y_test_pre=pd.DataFrame(st.session_state.y_test_pre)
@@ -560,8 +569,10 @@ def train_model(df_chuan_hoa,scaler,op_data):
 def get_option_kiem_tra():
     display_option = st.sidebar.selectbox("Chọn cách kiem tra", ["khong","kiem tra"],key="display_option_data_augumentation")    
     return display_option
-
 def kiem_tra_mo_hinh(model,mse,mae,cv_rmse,y_test,y_test_pre):
+    #op=get_option_kiem_tra()
+    #if st.sidebar.button("Kiểm tra mô hình",key="kiem_tra"):    
+    #if op=="kiem tra":
     if "button_clicked" not in st.session_state:
             st.session_state.button_clicked = False
     if "results" not in st.session_state:
