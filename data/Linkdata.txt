@@ -1,0 +1,7 @@
+https://www.kaggle.com/code/alfathterry/multivariate-time-series-forecasting-lstm
+
+https://www.kaggle.com/code/jurk06/auto-arima-on-multivariate-time-series
+
+https://www.kaggle.com/code/sasakitetsuya/multivariate-time-series-forecasting-with-lstms
+
+https://www.kaggle.com/datasets/gmkeshav/tetuan-city-power-consumption

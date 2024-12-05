@@ -1,0 +1,2 @@
+[{"epochs": 158, "batch_size": 32, "lstm_units": 43},
+{"epochs": 197, "batch_size": 16, "lstm_units": 42}]
