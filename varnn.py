@@ -11,7 +11,6 @@ import optuna
 from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolute_percentage_error
 from sklearn.preprocessing import MinMaxScaler
 from scipy.interpolate import interp1d
-from tensorflow.keras.callbacks import EarlyStopping
 
 #Biến đổi cột Date Time
 def tranformation(data_target):
@@ -97,7 +96,24 @@ def Min_max_scaler(data,min,max):
     scaled_data = pd.DataFrame(scaler.fit_transform(data), columns=data.columns)
     return [scaled_data,scaler]
 
+def Zero_mean_scaler(data):
+    # Tính mean của dữ liệu
+    mean_data = np.mean(data)
+    # Chuẩn hóa dữ liệu về zero mean
+    data_zero_mean = data - mean_data 
+    return data_zero_mean, mean_data
 
+def Inverse_zero_mean(scaled_data, mean_data):
+    if isinstance(mean_data, (np.ndarray, pd.Series)):
+        mean_data = np.array(mean_data)
+    
+    # Kiểm tra và broadcast nếu cần
+    if scaled_data.shape != mean_data.shape:
+        mean_data = np.broadcast_to(mean_data, scaled_data.shape)
+    
+    # Đảo ngược chuẩn hóa
+    original_data = scaled_data + mean_data
+    return original_data
 def time_warping(data, warp_factor=1.1):
     """
     Biến dạng thời gian bằng cách nội suy.
@@ -214,8 +230,7 @@ def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size):
     varnn_model.compile(optimizer='adam', loss='mse')
 
     X_train,y_train=prepare_data_for_ffnn(train_data,test_data,lag)
-    early_stopping = EarlyStopping(monitor='val_loss', patience=40, restore_best_weights=True)
-    history=varnn_model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size,validation_split=0.2, verbose=1,callbacks=[early_stopping])
+    history=varnn_model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size,validation_split=0.2, verbose=1)
 
     X_test = np.array([test_data.values[i:i+lag] for i in range(len(test_data)-lag)])
     y_test = test_data.values[lag:]

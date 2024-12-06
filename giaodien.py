@@ -56,7 +56,8 @@ def get_option_standardize():
 
     option = st.sidebar.selectbox("Chọn cách chuẩn hóa:",
                            ["Không chuẩn hóa",
-                            "min-max"]
+                            "min-max",
+                            "zero-mean"]
                            )
     return option
 
@@ -193,30 +194,33 @@ def chuanhoa(data,op):
     if op=="Không chuẩn hóa":
         st.session_state["data"]=data
         return data,data
-    elif op=="min-max":
-        min,max=get_option_min_max()
-        st.header("Dữ liệu đã chuẩn hóa:", divider='rainbow')       
-        df,scaler=v.Min_max_scaler(data,min,max)
-        display_option=get_option_display_df_chuan_hoa()
-        st.session_state["df"]=df
-        st.session_state["scaler"]=scaler
-
-       
+    else:
+        if op=="min-max":
+            min,max=get_option_min_max()
+            st.header("Dữ liệu đã chuẩn hóa:", divider='rainbow')       
+            df,scaler=v.Min_max_scaler(data,min,max)
+            st.session_state["df"]=df
+            st.session_state["scaler"]=scaler
+        elif op=="zero-mean":
+            st.header("Dữ liệu đã chuẩn hóa:", divider='rainbow')
+            df,mean_data=v.Zero_mean_scaler(data)
+            st.session_state["df"]=df
+            st.session_state["scaler"]=mean_data
+                      
+        display_option=get_option_display_df_chuan_hoa()       
         if display_option=="Số liệu":
             st.dataframe(st.session_state["df"])
-            return st.session_state["df"],st.session_state["scaler"]
         elif display_option == "Biểu đồ":
             column_name=get_option_column_to_draw_df_chuan_hoa(df)
             st.header("Biểu đồ", divider='rainbow')           
             draw_df_chuan_hoa(df,column_name)
-            return st.session_state["df"],st.session_state["scaler"]
         elif display_option == "Cả hai":
             column_name=get_option_column_to_draw_df_chuan_hoa(df)
             st.header("Dữ liệu :", divider='rainbow')
             st.dataframe(st.session_state["df"])            
             st.header("Biểu đồ", divider='rainbow')
             draw_df_chuan_hoa(st.session_state["df"],column_name)
-            return st.session_state["df"],st.session_state["scaler"]
+        return st.session_state["df"],st.session_state["scaler"]
         
         
 def get_option_display_df_chuan_hoa():
@@ -321,7 +325,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
             st.header("Kết quả huấn luyện:", divider='rainbow')
             st.write(f"Thời gian huấn luyện: {train_time:.2f} giây")
 
-            if op == "Không chuẩn hóa":
+            if op == "Không chuẩn hóa" or op == "zero-min":
                 y_test=pd.DataFrame(st.session_state.y_test)
                 y_test_pre=pd.DataFrame(st.session_state.y_test_pre)
                 y_test.columns=df_chuan_hoa.columns
@@ -336,7 +340,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 y_test_pre.columns=df_chuan_hoa.columns
             kiem_tra_mo_hinh(model,st.session_state.mse_var,st.session_state.mae_var,st.session_state.cv_rmse_var,y_test,y_test_pre)
             if st.sidebar.button("Dự đoán"):
-                if op == "Không chuẩn hóa":
+                if op == "Không chuẩn hóa" or op == "zero-min":
                     data=pd.DataFrame(st.session_state.forecast)
                     data.columns=df_chuan_hoa.columns            
                     st.dataframe(data.reset_index(drop=True))
@@ -438,13 +442,21 @@ def train_model(df_chuan_hoa,scaler,op_data):
                     y_test_pre=pd.DataFrame(st.session_state.y_test_pre)
                     y_test.columns=df_chuan_hoa.columns
                     y_test_pre.columns=df_chuan_hoa.columns
-                else:       
+                elif op=="min-max":       
                     y_test=scaler.inverse_transform(st.session_state.y_test)
                     y_test_pre=scaler.inverse_transform(st.session_state.y_test_pre)
                     y_test=pd.DataFrame(y_test)
                     y_test_pre=pd.DataFrame(y_test_pre)
                     y_test.columns=df_chuan_hoa.columns
                     y_test_pre.columns=df_chuan_hoa.columns
+                else:
+                    y_test=v.Inverse_zero_mean(st.session_state.y_test,scaler)
+                    y_test_pre=v.Inverse_zero_mean(st.session_state.y_test_pre,scaler)
+                    y_test=pd.DataFrame(y_test)
+                    y_test_pre=pd.DataFrame(y_test_pre)
+                    y_test.columns=df_chuan_hoa.columns
+                    y_test_pre.columns=df_chuan_hoa.columns
+                    
                 kiem_tra_mo_hinh(model,st.session_state.mse_varnn,st.session_state.mae_varnn,st.session_state.cv_rmse_varnn,y_test,y_test_pre)
                 if st.sidebar.button("Dự đoán"):
                     if op == "Không chuẩn hóa":
@@ -453,13 +465,21 @@ def train_model(df_chuan_hoa,scaler,op_data):
                         data.columns=df_chuan_hoa.columns
                 
                         st.dataframe(data.reset_index(drop=True))
-                    else:
+                    elif op == "min-max":
                         st.header("Kết quả dự đoán",divider="rainbow")
                         st.session_state.latest_prediction=scaler.inverse_transform(st.session_state.latest_prediction)
                         data=pd.DataFrame(st.session_state.latest_prediction)
                         data.columns=df_chuan_hoa.columns
                 
                         st.dataframe(data.reset_index(drop=True))
+                    else:
+                        st.header("Kết quả dự đoán",divider="rainbow")
+                        st.session_state.latest_prediction=v.Inverse_zero_mean(st.session_state.latest_prediction,scaler)
+                        data=pd.DataFrame(st.session_state.latest_prediction)
+                        data.columns=df_chuan_hoa.columns
+                
+                        st.dataframe(data.reset_index(drop=True))
+                        
             else:
                 pass
                 
@@ -498,23 +518,26 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 st.write(f"Số epochs hoàn thành: {len(history.history['loss'])}")
                 st.write(f"Validation Loss cuối cùng: {history.history['val_loss'][-1]:.4f}")  
                 
-                #st.dataframe(y_test)
-                #st.header("Kiểm tra mô hình ffnn:", divider='rainbow')
                 if op == "Không chuẩn hóa":
                     y_test=pd.DataFrame(st.session_state.y_test)
                     y_test_pre=pd.DataFrame(st.session_state.y_test_pre)
                     y_test.columns=df_chuan_hoa.columns
                     y_test_pre.columns=df_chuan_hoa.columns
-                    kiem_tra_mo_hinh(model,st.session_state.mse_ffnn,st.session_state.mae_ffnn,st.session_state.cv_rmse_ffnn,y_test,y_test_pre)
-                else:
-                    
+                elif op=="min-max":       
                     y_test=scaler.inverse_transform(st.session_state.y_test)
                     y_test_pre=scaler.inverse_transform(st.session_state.y_test_pre)
                     y_test=pd.DataFrame(y_test)
                     y_test_pre=pd.DataFrame(y_test_pre)
                     y_test.columns=df_chuan_hoa.columns
                     y_test_pre.columns=df_chuan_hoa.columns
-                    kiem_tra_mo_hinh(model,st.session_state.mse_ffnn,st.session_state.mae_ffnn,st.session_state.cv_rmse_ffnn,y_test,y_test_pre)
+                else:
+                    y_test=v.Inverse_zero_mean(st.session_state.y_test,scaler)
+                    y_test_pre=v.Inverse_zero_mean(st.session_state.y_test_pre,scaler)
+                    y_test=pd.DataFrame(y_test)
+                    y_test_pre=pd.DataFrame(y_test_pre)
+                    y_test.columns=df_chuan_hoa.columns
+                    y_test_pre.columns=df_chuan_hoa.columns
+                kiem_tra_mo_hinh(model,st.session_state.mse_ffnn,st.session_state.mae_ffnn,st.session_state.cv_rmse_ffnn,y_test,y_test_pre)
                 if st.sidebar.button("Dự đoán"):
                     if op == "Không chuẩn hóa":
                         st.header("Kết quả dự đoán",divider="rainbow")
@@ -522,9 +545,16 @@ def train_model(df_chuan_hoa,scaler,op_data):
                         data.columns=df_chuan_hoa.columns
                 
                         st.dataframe(data.reset_index(drop=True))
-                    else:
+                    elif op == "min-max":
                         st.header("Kết quả dự đoán",divider="rainbow")
                         st.session_state.latest_prediction=scaler.inverse_transform(st.session_state.latest_prediction)
+                        data=pd.DataFrame(st.session_state.latest_prediction)
+                        data.columns=df_chuan_hoa.columns
+                
+                        st.dataframe(data.reset_index(drop=True))
+                    else:
+                        st.header("Kết quả dự đoán",divider="rainbow")
+                        st.session_state.latest_prediction=v.Inverse_zero_mean(st.session_state.latest_prediction,scaler)
                         data=pd.DataFrame(st.session_state.latest_prediction)
                         data.columns=df_chuan_hoa.columns
                 
