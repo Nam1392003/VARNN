@@ -377,10 +377,11 @@ def train_model(df_chuan_hoa,scaler,op_data):
             with open("optimized\optimized_params_70_30_70_30.json", "r") as file:
                 loaded_params = json.load(file)
         else:
-                st.session_state.lstm_unit, st.session_state.epochs, st.session_state.batch_size=v.find_parameter_for_ffnn(train_data,test_data,ratio_train_val,lag)
+                st.session_state.lstm_unit, st.session_state.epochs, st.session_state.batch_size,st.session_state.learning_rate=v.find_parameter_for_ffnn(train_data,test_data,ratio_train_val,lag)
                 lstm_unit = st.session_state.lstm_unit
                 epochs = st.session_state.epochs
                 batch_size = st.session_state.batch_size
+                learning_rate=st.session_state.learning_rate
             
         if lstm_unit is None or epochs is None or batch_size is None:
             st.session_state.lstm_unit=loaded_params[op_data].get("lstm_units")

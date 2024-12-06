@@ -222,7 +222,8 @@ def find_parameter_for_ffnn(train_data,test_data, ratio_train_val,lag):
     lstm_unit=study.best_params["lstm_units"]
     epochs=study.best_params["epochs"]
     batch_size=study.best_params["batch_size"]
-    return [lstm_unit,epochs,batch_size]
+    learning_rate=study.best_params["learning_rate"]
+    return [lstm_unit,epochs,batch_size,learning_rate]
 
 # Với y dự đoán từ mô hình VAR đưa vào FFNN để train mô hình
 def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_rate):
