@@ -11,6 +11,7 @@ import optuna
 from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolute_percentage_error
 from sklearn.preprocessing import MinMaxScaler
 from scipy.interpolate import interp1d
+from tensorflow.keras.optimizers import Adam
 
 #Biến đổi cột Date Time
 def tranformation(data_target):
@@ -222,12 +223,13 @@ def find_parameter_for_ffnn(train_data,test_data, ratio_train_val,lag):
     return [lstm_unit,epochs,batch_size]
 
 # Với y dự đoán từ mô hình VAR đưa vào FFNN để train mô hình
-def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size):
+def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_rate):
     
     varnn_model = Sequential()
     varnn_model.add(LSTM(lstm_unit, activation='relu', input_shape=(lag, train_data.shape[1])))
     varnn_model.add(Dense(train_data.shape[1]))
-    varnn_model.compile(optimizer='adam', loss='mse')
+    optimizer = Adam(learning_rate=learning_rate)
+    varnn_model.compile(optimizer=optimizer, loss='mse')
 
     X_train,y_train=prepare_data_for_ffnn(train_data,test_data,lag)
     history=varnn_model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size,validation_split=0.2, verbose=1)
@@ -245,7 +247,7 @@ def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size):
     rmse_varnn = np.sqrt(mse_varnn)
     mean_y_test = np.mean(y_test)
     cv_rmse_varnn = (rmse_varnn / mean_y_test) * 100
-    return [history,latest_prediction,y_test,y_test_pre,mse_varnn, mae_varnn, cv_rmse_varnn]
+    return [history,latest_prediction,y_test,y_test_pre,mse_varnn, mae_varnn, cv_rmse_varnn,rmse_varnn]
 
 def train_ffnn(train_data,test_data, lag,epochs,lstm_unit,batch_size):
     ffnn_model = Sequential()
