@@ -61,7 +61,7 @@ def get_ratio_train_test():
     "Chọn tỉ lệ phần trăm :", 
     min_value=0, 
     max_value=100, 
-    value=50, 
+    value=80, 
     step=1)
     
     percentage_test=100-percentage_train
@@ -95,7 +95,7 @@ def get_ratio_val():
     "Chọn tỉ lệ phần trăm:", 
     min_value=0, 
     max_value=100, 
-    value=50, 
+    value=80, 
     step=1)
     
     percentage_val=100-percentage_train
@@ -377,12 +377,12 @@ def train_model(df_chuan_hoa,scaler,op_data):
             with open("optimized\optimized_params_70_30_70_30.json", "r") as file:
                 loaded_params = json.load(file)
         else:
-                st.session_state.lstm_unit, st.session_state.epochs, st.session_state.batch_size,st.session_state.learning_rate=v.find_parameter_for_ffnn(train_data,test_data,ratio_train_val,lag)
-                lstm_unit = st.session_state.lstm_unit
-                epochs = st.session_state.epochs
-                batch_size = st.session_state.batch_size
-                learning_rate=st.session_state.learning_rate
-            
+            st.session_state.lstm_unit, st.session_state.epochs, st.session_state.batch_size,st.session_state.learning_rate=v.find_parameter_for_ffnn(train_data,test_data,ratio_train_val,lag)
+            lstm_unit = st.session_state.lstm_unit
+            epochs = st.session_state.epochs
+            batch_size = st.session_state.batch_size
+            learning_rate=st.session_state.learning_rate
+    
         if lstm_unit is None or epochs is None or batch_size is None:
             st.session_state.lstm_unit=loaded_params[op_data].get("lstm_units")
             st.session_state.epochs=loaded_params[op_data].get("epochs")
@@ -392,17 +392,16 @@ def train_model(df_chuan_hoa,scaler,op_data):
             epochs = st.session_state.epochs
             batch_size = st.session_state.batch_size
             learning_rate=st.session_state.learning_rate
+
             
         if model=="VARNN": 
-            if "button_clicked" not in st.session_state:
-                st.session_state.button_clicked = False
+            
+            
+            # if "button_clicked" not in st.session_state:
+            #     st.session_state.button_clicked = False
             if st.sidebar.button("Huấn luyện mô hình"):
-                st.session_state.button_clicked = True
-            if st.session_state.button_clicked:
-                lstm_unit = st.session_state.lstm_unit
-                epochs = st.session_state.epochs
-                batch_size = st.session_state.batch_size
-
+            #     st.session_state.button_clicked = True
+            # if st.session_state.button_clicked:
                 #Tiến hành train
                 start_train_time = time.time()
                 history,latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_varnn, st.session_state.mae_varnn, st.session_state.cv_rmse_varnn, st.session_state.rmse_varnn=v.train_varnn(train_data,test_data,lag,epochs,lstm_unit,batch_size,learning_rate)
@@ -424,10 +423,10 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 #In ra các thông số train
                 st.write(f"Thời gian huấn luyện: {train_time:.2f} giây")
                 
-                st.write(f"LSTM units:{lstm_unit}")
-                st.write(f"Epochs: {epochs}")
-                st.write(f"Batch size:{batch_size}")
-                st.write(f"Learning_rate:{learning_rate}")
+                st.write(f"LSTM units:{st.session_state.lstm_unit}")
+                st.write(f"Epochs: {st.session_state.epochs}")
+                st.write(f"Batch size:{st.session_state.batch_size}")
+                st.write(f"Learning_rate:{st.session_state.learning_rate}")
                 st.write(f"Lag: {lag}")  
                 
                 if op == "Không chuẩn hóa":
@@ -442,6 +441,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
                     y_test_pre=pd.DataFrame(y_test_pre)
                     y_test.columns=df_chuan_hoa.columns
                     y_test_pre.columns=df_chuan_hoa.columns
+
                 else:
                     y_test=v.Inverse_zero_mean(st.session_state.y_test,scaler)
                     y_test_pre=v.Inverse_zero_mean(st.session_state.y_test_pre,scaler)
@@ -449,29 +449,31 @@ def train_model(df_chuan_hoa,scaler,op_data):
                     y_test_pre=pd.DataFrame(y_test_pre)
                     y_test.columns=df_chuan_hoa.columns
                     y_test_pre.columns=df_chuan_hoa.columns
+                st.session_state.y_test=y_test
+                st.session_state.y_test_pre=y_test_pre
                     
-                kiem_tra_mo_hinh(model,st.session_state.mse_varnn,st.session_state.mae_varnn,st.session_state.cv_rmse_varnn, st.session_state.rmse_varnn,y_test,y_test_pre)
-                if st.sidebar.button("Dự đoán"):
-                    if op == "Không chuẩn hóa":
-                        st.header("Kết quả dự đoán",divider="rainbow")
-                        data=pd.DataFrame(st.session_state.latest_prediction)
-                        data.columns=df_chuan_hoa.columns
-                
-                        st.dataframe(data.reset_index(drop=True))
-                    elif op == "min-max":
-                        st.header("Kết quả dự đoán",divider="rainbow")
-                        st.session_state.latest_prediction=scaler.inverse_transform(st.session_state.latest_prediction)
-                        data=pd.DataFrame(st.session_state.latest_prediction)
-                        data.columns=df_chuan_hoa.columns
-                
-                        st.dataframe(data.reset_index(drop=True))
-                    else:
-                        st.header("Kết quả dự đoán",divider="rainbow")
-                        st.session_state.latest_prediction=v.Inverse_zero_mean(st.session_state.latest_prediction,scaler)
-                        data=pd.DataFrame(st.session_state.latest_prediction)
-                        data.columns=df_chuan_hoa.columns
-                
-                        st.dataframe(data.reset_index(drop=True))
+            kiem_tra_mo_hinh(model,st.session_state.mse_varnn,st.session_state.mae_varnn,st.session_state.cv_rmse_varnn, st.session_state.rmse_varnn,st.session_state.y_test,st.session_state.y_test_pre)
+            if st.sidebar.button("Dự đoán"):
+                if op == "Không chuẩn hóa":
+                    st.header("Kết quả dự đoán",divider="rainbow")
+                    data=pd.DataFrame(st.session_state.latest_prediction)
+                    data.columns=df_chuan_hoa.columns
+            
+                    st.dataframe(data.reset_index(drop=True))
+                elif op == "min-max":
+                    st.header("Kết quả dự đoán",divider="rainbow")
+                    st.session_state.latest_prediction=scaler.inverse_transform(st.session_state.latest_prediction)
+                    data=pd.DataFrame(st.session_state.latest_prediction)
+                    data.columns=df_chuan_hoa.columns
+            
+                    st.dataframe(data.reset_index(drop=True))
+                else:
+                    st.header("Kết quả dự đoán",divider="rainbow")
+                    st.session_state.latest_prediction=v.Inverse_zero_mean(st.session_state.latest_prediction,scaler)
+                    data=pd.DataFrame(st.session_state.latest_prediction)
+                    data.columns=df_chuan_hoa.columns
+            
+                    st.dataframe(data.reset_index(drop=True))
                         
             else:
                 pass
