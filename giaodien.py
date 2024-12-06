@@ -19,17 +19,10 @@ def get_model():
     st.sidebar.header("Chọn mô hình", divider='rainbow')
     model = st.sidebar.selectbox("Chọn mô hình:",
                            ["VARNN",
-                            "VAR",
-                            "FFNN"]
+                            ]
                            )
     return model
-def load_model_to_predict(model):
-    if model=="VARNN":
-        model = tf.keras.models.load_model("varnn_model.keras")
-    elif model=="FFNN":
-        model=tf.keras.models.load_model("ffnn_model.keras")
-    elif model=="VAR":
-        model=tf.keras.models.load_model("var_model.keras")
+
 def get_data(uploaded_file):
     
     if uploaded_file:

@@ -197,12 +197,14 @@ def find_parameter_for_ffnn(train_data,test_data, ratio_train_val,lag):
         epochs = trial.suggest_int("epochs", 50, 300)
         batch_size = trial.suggest_categorical("batch_size", [16, 32, 64, 128])
         lstm_units = trial.suggest_int("lstm_units", 10, 100)
+        learning_rate=trial.suggest_categorical("learning_rate",[0.0001,0.001,0.01,0.1])
 
         # Khởi tạo mô hình 
         model = Sequential()
         model.add(LSTM(lstm_units, activation='relu', input_shape=(lag, train_data.shape[1])))
         model.add(Dense(train_data.shape[1]))
-        model.compile(optimizer='adam', loss='mse')
+        optimizer = Adam(learning_rate=learning_rate)
+        model.compile(optimizer=optimizer, loss='mse')
 
         X_train_split, X_val_split, y_train_split, y_val_split=devide_train_val(train_data,test_data,lag,ratio_train_val)
         # Huấn luyện mô hình với tập validation
@@ -249,11 +251,13 @@ def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_r
     cv_rmse_varnn = (rmse_varnn / mean_y_test) * 100
     return [history,latest_prediction,y_test,y_test_pre,mse_varnn, mae_varnn, cv_rmse_varnn,rmse_varnn]
 
-def train_ffnn(train_data,test_data, lag,epochs,lstm_unit,batch_size):
+def train_ffnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_rate):
     ffnn_model = Sequential()
     ffnn_model.add(LSTM(lstm_unit, activation='relu', input_shape=(lag, train_data.shape[1])))
     ffnn_model.add(Dense(train_data.shape[1]))
-    ffnn_model.compile(optimizer='adam', loss='mse')
+    optimizer = Adam(learning_rate=learning_rate)
+    ffnn_model.compile(optimizer=optimizer, loss='mse')
+
 
     X_train = np.array([train_data.values[i:i+lag] for i in range(len(train_data)-lag)])
     y_train = train_data.values[lag:]
