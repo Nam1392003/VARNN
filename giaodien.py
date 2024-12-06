@@ -396,18 +396,20 @@ def train_model(df_chuan_hoa,scaler,op_data):
             
         if model=="VARNN": 
             
-            
+            if "mse_varnn" not in st.session_state:
+                st.session_state.mse_varnn = None
             # if "button_clicked" not in st.session_state:
             #     st.session_state.button_clicked = False
             if st.sidebar.button("Huấn luyện mô hình"):
             #     st.session_state.button_clicked = True
             # if st.session_state.button_clicked:
                 #Tiến hành train
+
                 start_train_time = time.time()
                 history,latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_varnn, st.session_state.mae_varnn, st.session_state.cv_rmse_varnn, st.session_state.rmse_varnn=v.train_varnn(train_data,test_data,lag,epochs,lstm_unit,batch_size,learning_rate)
                 st.session_state.latest_prediction=latest_prediction           
                 end_train_time = time.time()
-
+                
                 train_time=end_train_time-start_train_time
 
                 #Vẽ biểu đồ 2 đường loss và val_loss
@@ -451,8 +453,11 @@ def train_model(df_chuan_hoa,scaler,op_data):
                     y_test_pre.columns=df_chuan_hoa.columns
                 st.session_state.y_test=y_test
                 st.session_state.y_test_pre=y_test_pre
-                    
-            kiem_tra_mo_hinh(model,st.session_state.mse_varnn,st.session_state.mae_varnn,st.session_state.cv_rmse_varnn, st.session_state.rmse_varnn,st.session_state.y_test,st.session_state.y_test_pre)
+            mse=st.session_state.mse_varnn
+            if mse is None:    
+                pass
+            else:
+                kiem_tra_mo_hinh(model,st.session_state.mse_varnn,st.session_state.mae_varnn,st.session_state.cv_rmse_varnn, st.session_state.rmse_varnn,st.session_state.y_test,st.session_state.y_test_pre)
             if st.sidebar.button("Dự đoán"):
                 if op == "Không chuẩn hóa":
                     st.header("Kết quả dự đoán",divider="rainbow")
