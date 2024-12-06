@@ -3,8 +3,6 @@ warnings.filterwarnings('ignore')
 import pandas as pd
 import numpy as np
 from statsmodels.tsa.stattools import adfuller
-import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.model_selection import train_test_split
 from statsmodels.tsa.api import VAR
 from tensorflow.keras.models import Sequential
@@ -24,11 +22,6 @@ def tranformation(data_target):
         if 'Date Time' in data_target.columns:
             data_target['Date Time'] = pd.to_datetime(data_target['Date Time'], format="%d.%m.%Y %H:%M:%S")
             data_target.set_index('Date Time', inplace=True, drop=True)
-            daily_target = data_target.resample('1D').mean()
-            daily_target.fillna(daily_target.rolling(window=10, min_periods=5).mean(), inplace=True)
-        elif 'Date' in data_target.columns:
-            data_target['Date'] = pd.to_datetime(data_target['Date'], format="%d.%m.%Y %H:%M")
-            data_target.set_index('Date', inplace=True, drop=True)
             daily_target = data_target.resample('1D').mean()
             daily_target.fillna(daily_target.rolling(window=10, min_periods=5).mean(), inplace=True)
         else:
@@ -53,7 +46,6 @@ def adf_test(timeseries):
     return dfoutput
      
 def kiemdinh(df,target):
-    #target = 'T (degC)'
     dfoutput= adf_test(df[target])
     if dfoutput["p-value"] < 0.05:
         str=f"=>{target} là chuỗi dừng"
@@ -105,14 +97,7 @@ def Min_max_scaler(data,min,max):
     scaled_data = pd.DataFrame(scaler.fit_transform(data), columns=data.columns)
     return [scaled_data,scaler]
 
-def Zero_min_scaler(data):
-    # Khởi tạo scaler
-    scaler = MinMaxScaler(feature_range=(0, 1))
 
-    # Áp dụng scaler cho tất cả các cột số
-    scaled_data = pd.DataFrame(scaler.fit_transform(data), columns=data.columns)
-    return [scaled_data,scaler]
-#Chia dữ liệu thành train/test với tỉ lệ 80/20
 def time_warping(data, warp_factor=1.1):
     """
     Biến dạng thời gian bằng cách nội suy.
@@ -174,9 +159,6 @@ def train_VAR(train_data,test_data,lag):
     return [var_result,forecast,y_test,y_test_pre,mse_var,mae_var,cv_rmse_var,pred_var]
 
 def prepare_data_for_ffnn(train_data,test_data,lag):
-    # Chuẩn bị dữ liệu cho FFNN
-    #train_data = train_data.astype(np.float32)
-    #test_data = test_data.astype(np.float32)
     X_train = np.array([train_data.values[i:i+lag] for i in range(len(train_data)-lag)])
     var_result,forecast,y_test,y_test_pre,mse_var,mae_var,cv_rmse_var,pred_var = train_VAR(train_data,test_data,lag)
     y_train=pred_var
@@ -274,10 +256,3 @@ def train_ffnn(train_data,test_data, lag,epochs,lstm_unit,batch_size):
     mean_y_test = np.mean(y_test)
     cv_rmse_ffnn = (rmse_ffnn / mean_y_test) * 100
     return [history,latest_prediction,y_test,y_test_pre,mse_ffnn, mae_ffnn, cv_rmse_ffnn]
-
-
-#data=pd.read_csv(r"C:\Users\DELL\Downloads\data_final (1)\Tetuan City power consumption.csv")
-#data=tranformation(data)
-#data=chuanhoachuoidung(data)
-#print(data)
-

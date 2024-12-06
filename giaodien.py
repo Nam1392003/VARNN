@@ -2,11 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.model_selection import train_test_split
 from statsmodels.tsa.stattools import adfuller
-import seaborn as sns
-from pandasai.responses.response_parser import ResponseParser
 import tensorflow as tf
 import varnn as v
 import json
@@ -17,18 +14,6 @@ st.title("Ứng dụng Dự đoán Chuỗi Thời Gian đa biến")
 
 # Sidebar
 st.sidebar.header("Thiết lập cấu hình", divider='rainbow')
-class OutputParser(ResponseParser):
-    def __init__(self, context) -> None:
-        super().__init__(context)
-    def parse(self, result):
-        if result['type'] == "dataframe":
-            st.dataframe(result['value'])
-        elif result['type'] == 'plot':
-            st.image(result["value"])
-        else:
-            st.write(result['value'])
-        return
-
 
 def get_model():
     st.sidebar.header("Chọn mô hình", divider='rainbow')
@@ -71,8 +56,7 @@ def get_option_standardize():
 
     option = st.sidebar.selectbox("Chọn cách chuẩn hóa:",
                            ["Không chuẩn hóa",
-                            "min-max",
-                            "zero-min"]
+                            "min-max"]
                            )
     return option
 
@@ -132,9 +116,12 @@ def get_option_column_to_draw(data):
     option = st.sidebar.selectbox("Chọn cột", list(column_name[1:]),key="select_column_to_draw")
     return option
 def get_option_column_to_draw_df_chuan_hoa(data):
-    st.sidebar.write("Chọn cột")
     column_name=data.columns
     option = st.sidebar.selectbox("Chọn cột", list(column_name[0:]),key="select_column_to_draw_df_chuan_hoa")
+    return option
+def get_option_column_to_draw_df_chuoi_dung(data):
+    column_name=data.columns
+    option = st.sidebar.selectbox("Chọn cột", list(column_name[0:]),key="select_column_to_draw_df_chuoi_dung")
     return option
 def get_option_column_to_check_stationary(data):
     st.sidebar.header("Chọn cột kiểm định chuỗi dừng",  divider='rainbow')
@@ -186,6 +173,9 @@ def data_argumentation(data):
 def get_option_display_data_augumentation():
     display_option = st.sidebar.selectbox("Chọn cách hiển thị dữ liệu", ["Số liệu", "Biểu đồ", "Cả hai"],key="display_option_data_augumentation")    
     return display_option
+def get_option_display_chuoi_dung():
+    display_option = st.sidebar.selectbox("Chọn cách hiển thị dữ liệu", ["Số liệu", "Biểu đồ", "Cả hai"],key="display_option_chuoi_dung")    
+    return display_option
 def get_option_column_to_draw_data_augumentation(data):
     st.sidebar.write("Chọn cột")
     column_name=data.columns
@@ -213,7 +203,6 @@ def chuanhoa(data,op):
 
        
         if display_option=="Số liệu":
-            #st.header("Dữ liệu :", divider='rainbow')
             st.dataframe(st.session_state["df"])
             return st.session_state["df"],st.session_state["scaler"]
         elif display_option == "Biểu đồ":
@@ -229,14 +218,6 @@ def chuanhoa(data,op):
             draw_df_chuan_hoa(st.session_state["df"],column_name)
             return st.session_state["df"],st.session_state["scaler"]
         
-    elif op=="zero-min":
-        st.header("Dữ liệu đã chuẩn hóa:", divider='rainbow')
-        df,scaler=v.Zero_min_scaler(data)
-        st.session_state["df"]=df
-        st.session_state["scaler"]=scaler
-        st.dataframe(st.session_state["df"])
-        return st.session_state["df"],st.session_state["scaler"]
-        
         
 def get_option_display_df_chuan_hoa():
     display_option = st.sidebar.selectbox("Chọn cách hiển thị dữ liệu", ["Số liệu", "Biểu đồ", "Cả hai"],key="display_option_chuan_hoa")    
@@ -247,7 +228,7 @@ def draw(data,column):
     fig, ax = plt.subplots(figsize=(15, 5))
     fig, ax = plt.subplots(figsize=(15, 5))
     ax.plot(data.index, data[column], label=column, color='blue')
-    ax.set_title(f"{column} Over Time (Sampled)", fontsize=14)
+    ax.set_title(f"{column} Over Time", fontsize=14)
     ax.set_xlabel("Date Time")
     ax.set_ylabel(column)
     ax.grid()
@@ -289,7 +270,6 @@ def draw_df_chuan_hoa(data,column):
     fig, ax = plt.subplots(figsize=(15, 5))
     ax.plot(data.index, data[column], label=column, color='blue')
     ax.set_title(f"{column} Over Time", fontsize=14)
-    #ax.set_xlabel("Date Time")
     ax.set_ylabel(column)
     ax.grid()
     ax.legend()
@@ -329,7 +309,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
     if model=="VAR":
         if "button_clicked" not in st.session_state:
             st.session_state.button_clicked = False
-        if st.sidebar.button("Train"):
+        if st.sidebar.button("Huấn luyện mô hình"):
             st.session_state.button_clicked = True
         if st.session_state.button_clicked:
             start_train_time = time.time()
@@ -348,14 +328,12 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 y_test_pre.columns=df_chuan_hoa.columns
                     
             else:
-                    
                 y_test=scaler.inverse_transform(st.session_state.y_test)
                 y_test_pre=scaler.inverse_transform(st.session_state.y_test_pre)
                 y_test=pd.DataFrame(y_test)
                 y_test_pre=pd.DataFrame(y_test_pre)
                 y_test.columns=df_chuan_hoa.columns
                 y_test_pre.columns=df_chuan_hoa.columns
-            #st.header("Kết quả dự đoán:", divider='rainbow')
             kiem_tra_mo_hinh(model,st.session_state.mse_var,st.session_state.mae_var,st.session_state.cv_rmse_var,y_test,y_test_pre)
             if st.sidebar.button("Dự đoán"):
                 if op == "Không chuẩn hóa":
@@ -364,7 +342,6 @@ def train_model(df_chuan_hoa,scaler,op_data):
                     st.dataframe(data.reset_index(drop=True))
                 else:
                     st.session_state.forecast=scaler.inverse_transform(st.session_state.forecast)
-                    #st.session_state["df"]=v.get_data_target(df_chuan_hoa).columns
                     data=pd.DataFrame(st.session_state.forecast)
                     data.columns=df_chuan_hoa.columns
             
@@ -372,10 +349,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
             
     elif model=="VARNN" or model=="FFNN":
         ratio_train_val=get_ratio_val()
-        #lstm_unit, epochs, batch_size = None, None, None  # Giá trị mặc định
-        
         if st.sidebar.button("Tìm tham số tối ưu"):
-            #st.session_state.lstm_unit, st.session_state.epochs, st.session_state.batch_size=v.find_parameter_for_ffnn(train_data,test_data,ratio_train_val,lag)
             lstm_unit = None
             epochs = None
             batch_size = None
@@ -420,7 +394,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 epochs = st.session_state.epochs
                 batch_size = st.session_state.batch_size
             st.header("Các tham số tối ưu:", divider='rainbow')
-            st.write(f"Hidden units:{lstm_unit}")
+            st.write(f"LSTM units:{lstm_unit}")
             st.write(f"Epochs: {epochs}")
             st.write(f"Batch size:{batch_size}")
             st.write(f"Lag: {lag}") 
@@ -428,7 +402,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
         if model=="VARNN": 
             if "button_clicked" not in st.session_state:
                 st.session_state.button_clicked = False
-            if st.sidebar.button("Train"):
+            if st.sidebar.button("Huấn luyện mô hình"):
                 st.session_state.button_clicked = True
             if st.session_state.button_clicked:
                 lstm_unit = st.session_state.lstm_unit
@@ -459,17 +433,12 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 st.write(f"Số epochs hoàn thành: {len(history.history['loss'])}")
                 st.write(f"Validation Loss cuối cùng: {history.history['val_loss'][-1]:.4f}")  
                 
-                #st.dataframe(y_test)
-                #st.header("Kiểm tra mô hình varnn:", divider='rainbow')
-                
                 if op == "Không chuẩn hóa":
                     y_test=pd.DataFrame(st.session_state.y_test)
                     y_test_pre=pd.DataFrame(st.session_state.y_test_pre)
                     y_test.columns=df_chuan_hoa.columns
                     y_test_pre.columns=df_chuan_hoa.columns
-                    
-                else:
-                    
+                else:       
                     y_test=scaler.inverse_transform(st.session_state.y_test)
                     y_test_pre=scaler.inverse_transform(st.session_state.y_test_pre)
                     y_test=pd.DataFrame(y_test)
@@ -498,7 +467,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
         elif model=="FFNN":
             if "button_clicked" not in st.session_state:
                 st.session_state.button_clicked = False
-            if st.sidebar.button("Train"):
+            if st.sidebar.button("Huấn luyện mô hình"):
                 st.session_state.button_clicked = True
             if st.session_state.button_clicked:
                 lstm_unit = st.session_state.lstm_unit
@@ -509,11 +478,6 @@ def train_model(df_chuan_hoa,scaler,op_data):
 
                 history,latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_ffnn, st.session_state.mae_ffnn, st.session_state.cv_rmse_ffnn=v.train_ffnn(train_data,test_data,lag,epochs,lstm_unit,batch_size)
                 st.session_state.latest_prediction=latest_prediction
-                #y_test=pd.DataFrame(st.session_state.y_test)
-                #y_test_pre=pd.DataFrame(st.session_state.y_test_pre)
-                #y_test.columns=df_chuan_hoa.columns
-                #y_test_pre.columns=df_chuan_hoa.columns
-                
                 end_train_time = time.time()
 
                 train_time=end_train_time-start_train_time
@@ -636,7 +600,18 @@ else:
         if op=="Chuẩn hóa":
             data_preprocess=v.chuanhoachuoidung(data_preprocess)
             st.write("Dữ liệu đã chuẩn hóa chuỗi dừng")
-            st.dataframe(data_preprocess)
+            op_dung=get_option_display_chuoi_dung()
+            
+            if op_dung=="Số liệu":
+                
+                st.dataframe(data_preprocess)
+            elif op_dung=="Biểu đồ":
+                op=get_option_column_to_draw_df_chuoi_dung(data_preprocess)
+                draw(data_preprocess,op)
+            else:
+                st.dataframe(data_preprocess)
+                op=get_option_column_to_draw_df_chuoi_dung(data_preprocess)
+                draw(data_preprocess,op)
         else:
             pass
 data_augumentation=data_argumentation(data_preprocess)
