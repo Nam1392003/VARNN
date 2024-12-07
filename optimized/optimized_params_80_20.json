@@ -1,4 +1,4 @@
-[{"epochs": 89, "batch_size": 128, "lstm_units": 21,"learning_rate":0.01},
-{"epochs": 300, "batch_size": 32, "lstm_units": 100,"learning_rate":0.01},
-{"epochs": 271, "batch_size": 16, "lstm_units": 77,"learning_rate":0.01},
+[{"epochs": 251, "batch_size": 64, "lstm_units": 66,"learning_rate":0.01},
+{"epochs": 245, "batch_size": 16, "lstm_units": 85,"learning_rate":0.001},
+{"epochs": 286, "batch_size": 16, "lstm_units": 76,"learning_rate":0.01},
 {"epochs": 222, "batch_size": 16, "lstm_units": 79,"learning_rate":0.01}]

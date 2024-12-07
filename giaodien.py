@@ -284,22 +284,54 @@ def data_preprocessing(data):
         st.dataframe(st.session_state["df_tr"])
         return st.session_state["df_tr"]
 
-def find_hyperparameter(train_data,test_data,ratio_train_val,lag):
-    if st.sidebar.button("Tìm tham số tối ưu"):
-        st.session_state["lstm_unit"],st.session_state["epochs"],st.session_state["batch_size"]=v.find_parameter_for_ffnn(train_data,test_data,ratio_train_val,lag)
-        st.header("Các tham số tối ưu:", divider='rainbow')
-        lstm_unit=st.session_state["lstm_unit"]
-        epochs=st.session_state["epochs"]
-        batch_size=st.session_state["batch_size"]
-        st.write(f"Số đơn vị ẩn:{lstm_unit}")
-        st.write(f"Epochs: {epochs}")
-        st.write(f"Batch_size:{batch_size}")
-        st.write(f"Độ trễ: {lag}")
-        return [st.session_state["lstm_unit"],st.session_state["epochs"], st.session_state["batch_size"]]
+def find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data):
+    lstm_unit = None
+    epochs = None
+    batch_size = None
+    learning_rate = None
+    
+    if ratio_train_test==0.2 and ratio_train_val==0.2:
+        with open("optimized\optimized_params_80_20.json", "r") as file:
+            loaded_params = json.load(file)
+    elif ratio_train_test==0.2 and ratio_train_val==0.25:
+        with open("optimized\optimized_params_80_20_75_25.json", "r") as file:
+            loaded_params = json.load(file)
+    elif ratio_train_test==0.2 and ratio_train_val==0.3:
+        with open("optimized\optimized_params_80_20_70_30.json", "r") as file:
+            loaded_params = json.load(file)
+    elif ratio_train_test==0.25 and ratio_train_val==0.2:
+        with open("optimized\optimized_params_75_25_80_20.json", "r") as file:
+            loaded_params = json.load(file)
+    elif ratio_train_test==0.25 and ratio_train_val==0.25:
+        with open("optimized\optimized_params_75_25_75_25.json", "r") as file:
+            loaded_params = json.load(file)
+    elif ratio_train_test==0.25 and ratio_train_val==0.3:
+        with open("optimized\optimized_params_75_25_70_30.json", "r") as file:
+            loaded_params = json.load(file)
+    elif ratio_train_test==0.3 and ratio_train_val==0.2:
+        with open("optimized\optimized_params_70_30_80_20.json", "r") as file:
+            loaded_params = json.load(file)
+    elif ratio_train_test==0.3 and ratio_train_val==0.25:
+        with open("optimized\optimized_params_70_30_75_25.json", "r") as file:
+            loaded_params = json.load(file)
+    elif ratio_train_test==0.3 and ratio_train_val==0.3:
+        with open("optimized\optimized_params_70_30_70_30.json", "r") as file:
+            loaded_params = json.load(file)
+    else:
+        lstm_unit, epochs, batch_size, learning_rate=v.find_parameter_for_ffnn(train_data,test_data,ratio_train_val,lag)
+    
+    if lstm_unit is None or epochs is None or batch_size is None or learning_rate is None:
+        lstm_unit=loaded_params[op_data].get("lstm_units")
+        epochs=loaded_params[op_data].get("epochs")
+        batch_size=loaded_params[op_data].get("batch_size")
+        learning_rate=loaded_params[op_data].get("learning_rate")
+
+    return lstm_unit, epochs, batch_size, learning_rate
 
 def train_model(df_chuan_hoa,scaler,op_data):  
     model=get_model()
     ratio_train_test=get_ratio_train_test()
+    ratio_train_val=get_ratio_val()
     train_data,test_data= v.devide_train_test(df_chuan_hoa,ratio_train_test)
     lag=v.find_lag(train_data) 
     
@@ -344,67 +376,14 @@ def train_model(df_chuan_hoa,scaler,op_data):
             
                     st.dataframe(data.reset_index(drop=True))
             
-    elif model=="VARNN" or model=="FFNN":
-        ratio_train_val=get_ratio_val()
-        lstm_unit = None
-        epochs = None
-        batch_size = None
-        if ratio_train_test==0.2 and ratio_train_val==0.2:
-            with open("optimized\optimized_params_80_20.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.2 and ratio_train_val==0.25:
-            with open("optimized\optimized_params_80_20_75_25.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.2 and ratio_train_val==0.3:
-            with open("optimized\optimized_params_80_20_70_30.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.25 and ratio_train_val==0.2:
-            with open("optimized\optimized_params_75_25_80_20.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.25 and ratio_train_val==0.25:
-            with open("optimized\optimized_params_75_25_75_25.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.25 and ratio_train_val==0.3:
-            with open("optimized\optimized_params_75_25_70_30.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.3 and ratio_train_val==0.2:
-            with open("optimized\optimized_params_70_30_80_20.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.3 and ratio_train_val==0.25:
-            with open("optimized\optimized_params_70_30_75_25.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.3 and ratio_train_val==0.3:
-            with open("optimized\optimized_params_70_30_70_30.json", "r") as file:
-                loaded_params = json.load(file)
-        else:
-            st.session_state.lstm_unit, st.session_state.epochs, st.session_state.batch_size,st.session_state.learning_rate=v.find_parameter_for_ffnn(train_data,test_data,ratio_train_val,lag)
-            lstm_unit = st.session_state.lstm_unit
-            epochs = st.session_state.epochs
-            batch_size = st.session_state.batch_size
-            learning_rate=st.session_state.learning_rate
-    
-        if lstm_unit is None or epochs is None or batch_size is None:
-            st.session_state.lstm_unit=loaded_params[op_data].get("lstm_units")
-            st.session_state.epochs=loaded_params[op_data].get("epochs")
-            st.session_state.batch_size=loaded_params[op_data].get("batch_size")
-            st.session_state.learning_rate=loaded_params[op_data].get("learning_rate")
-            lstm_unit = st.session_state.lstm_unit
-            epochs = st.session_state.epochs
-            batch_size = st.session_state.batch_size
-            learning_rate=st.session_state.learning_rate
-
-            
+    elif model=="VARNN" or model=="FFNN":    
         if model=="VARNN": 
             
             if "mse_varnn" not in st.session_state:
                 st.session_state.mse_varnn = None
-            # if "button_clicked" not in st.session_state:
-            #     st.session_state.button_clicked = False
             if st.sidebar.button("Huấn luyện mô hình"):
-            #     st.session_state.button_clicked = True
-            # if st.session_state.button_clicked:
-                #Tiến hành train
-
+                lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
+ 
                 start_train_time = time.time()
                 history,latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_varnn, st.session_state.mae_varnn, st.session_state.cv_rmse_varnn, st.session_state.rmse_varnn=v.train_varnn(train_data,test_data,lag,epochs,lstm_unit,batch_size,learning_rate)
                 st.session_state.latest_prediction=latest_prediction           
@@ -425,10 +404,10 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 #In ra các thông số train
                 st.write(f"Thời gian huấn luyện: {train_time:.2f} giây")
                 
-                st.write(f"LSTM units:{st.session_state.lstm_unit}")
-                st.write(f"Epochs: {st.session_state.epochs}")
-                st.write(f"Batch size:{st.session_state.batch_size}")
-                st.write(f"Learning_rate:{st.session_state.learning_rate}")
+                st.write(f"LSTM units:{lstm_unit}")
+                st.write(f"Epochs: {epochs}")
+                st.write(f"Batch size:{batch_size}")
+                st.write(f"Learning_rate:{learning_rate}")
                 st.write(f"Lag: {lag}")  
                 
                 if op == "Không chuẩn hóa":
@@ -566,9 +545,6 @@ def get_option_kiem_tra():
     display_option = st.sidebar.selectbox("Chọn cách kiem tra", ["khong","kiem tra"],key="display_option_data_augumentation")    
     return display_option
 def kiem_tra_mo_hinh(model,mse,mae,cv_rmse,rmse,y_test,y_test_pre):
-    #op=get_option_kiem_tra()
-    #if st.sidebar.button("Kiểm tra mô hình",key="kiem_tra"):    
-    #if op=="kiem tra":
     if "button_clicked" not in st.session_state:
             st.session_state.button_clicked = False
     if "results" not in st.session_state:
