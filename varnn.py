@@ -12,6 +12,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolu
 from sklearn.preprocessing import MinMaxScaler
 from scipy.interpolate import interp1d
 from tensorflow.keras.optimizers import Adam
+import time
 
 #Biến đổi cột Date Time
 def tranformation(data_target):
@@ -240,6 +241,7 @@ def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_r
     X_test = np.array([test_data.values[i:i+lag] for i in range(len(test_data)-lag)])
     y_test = test_data.values[lag:]
 
+    start_train_time = time.time()
     y_test_pre = varnn_model.predict(X_test)
     latest_data = y_test[-lag:].reshape(1, lag, y_test.shape[1])
     latest_prediction = varnn_model.predict(latest_data)
@@ -250,7 +252,9 @@ def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_r
     rmse_varnn = np.sqrt(mse_varnn)
     mean_y_test = np.mean(y_test)
     cv_rmse_varnn = (rmse_varnn / mean_y_test) * 100
-    return [history,latest_prediction,y_test,y_test_pre,mse_varnn, mae_varnn, cv_rmse_varnn,rmse_varnn]
+    end_train_time = time.time()
+    test_time=end_train_time-start_train_time
+    return [history,latest_prediction,y_test,y_test_pre,mse_varnn, mae_varnn, cv_rmse_varnn,rmse_varnn,test_time]
 
 def train_ffnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_rate):
     ffnn_model = Sequential()

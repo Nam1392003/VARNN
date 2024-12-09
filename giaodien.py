@@ -385,7 +385,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
  
                 start_train_time = time.time()
-                history,latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_varnn, st.session_state.mae_varnn, st.session_state.cv_rmse_varnn, st.session_state.rmse_varnn=v.train_varnn(train_data,test_data,lag,epochs,lstm_unit,batch_size,learning_rate)
+                history,latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_varnn, st.session_state.mae_varnn, st.session_state.cv_rmse_varnn, st.session_state.rmse_varnn,st.session_state.test_time =v.train_varnn(train_data,test_data,lag,epochs,lstm_unit,batch_size,learning_rate)
                 st.session_state.latest_prediction=latest_prediction           
                 end_train_time = time.time()
                 
@@ -436,7 +436,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
             if mse is None:    
                 pass
             else:
-                kiem_tra_mo_hinh(model,st.session_state.mse_varnn,st.session_state.mae_varnn,st.session_state.cv_rmse_varnn, st.session_state.rmse_varnn,st.session_state.y_test,st.session_state.y_test_pre)
+                kiem_tra_mo_hinh(model,st.session_state.mse_varnn,st.session_state.mae_varnn,st.session_state.cv_rmse_varnn, st.session_state.rmse_varnn,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.test_time)
             if st.sidebar.button("Dự đoán"):
                 if op == "Không chuẩn hóa":
                     st.header("Kết quả dự đoán",divider="rainbow")
@@ -544,7 +544,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
 def get_option_kiem_tra():
     display_option = st.sidebar.selectbox("Chọn cách kiem tra", ["khong","kiem tra"],key="display_option_data_augumentation")    
     return display_option
-def kiem_tra_mo_hinh(model,mse,mae,cv_rmse,rmse,y_test,y_test_pre):
+def kiem_tra_mo_hinh(model,mse,mae,cv_rmse,rmse,y_test,y_test_pre,test_time):
     if "button_clicked" not in st.session_state:
             st.session_state.button_clicked = False
     if "results" not in st.session_state:
@@ -559,6 +559,7 @@ def kiem_tra_mo_hinh(model,mse,mae,cv_rmse,rmse,y_test,y_test_pre):
             "RMSE":rmse,
             "y_test_pre": y_test_pre,
             "y_test": y_test,
+            "test_time":test_time
         }
     if st.session_state.button_clicked and st.session_state.results:
     #if st.sidebar.checkbox("Kiểm tra mô hình"):
@@ -567,6 +568,7 @@ def kiem_tra_mo_hinh(model,mse,mae,cv_rmse,rmse,y_test,y_test_pre):
         st.write(f"MAE: {st.session_state.results['MAE']}")
         st.write(f"RMSE: {st.session_state.results['RMSE']}")
         st.write(f"CV_RMSE: {st.session_state.results['CV_RMSE']}")
+        st.write(f"Thời gian test: {st.session_state.results['test_time']:.4f}")
         st.dataframe(st.session_state.results["y_test_pre"])
 
         # Gọi hàm vẽ đồ thị (giả sử các hàm này đã được định nghĩa)
