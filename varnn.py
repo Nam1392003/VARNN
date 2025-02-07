@@ -13,6 +13,8 @@ from sklearn.preprocessing import MinMaxScaler
 from scipy.interpolate import interp1d
 from tensorflow.keras.optimizers import Adam
 import time
+from bayes_opt import BayesianOptimization
+import random
 
 #Biến đổi cột Date Time
 def tranformation(data_target):
@@ -227,8 +229,89 @@ def find_parameter_for_ffnn(train_data,test_data, ratio_train_val,lag):
     batch_size=study.best_params["batch_size"]
     learning_rate=study.best_params["learning_rate"]
     return [lstm_unit,epochs,batch_size,learning_rate]
-
+def find_parameter_for_ffnn__bayesian(train_data,test_data, ratio_train_val,lag):
+    def objective(epochs, batch_size, lstm_units, learning_rate):
+        epochs = int(epochs)
+        batch_size = int(batch_size)
+        lstm_units = int(lstm_units)
+        
+        # Khởi tạo mô hình
+        model = Sequential()
+        model.add(LSTM(lstm_units, activation='relu', input_shape=(lag, train_data.shape[1])))
+        model.add(Dense(train_data.shape[1]))
+        optimizer = Adam(learning_rate=learning_rate)
+        model.compile(optimizer=optimizer, loss='mse')
+        
+        X_train_split, X_val_split, y_train_split, y_val_split = devide_train_val(train_data, test_data, lag, ratio_train_val)
+        
+        # Huấn luyện mô hình với tập validation
+        model.fit(X_train_split, y_train_split, epochs=epochs, batch_size=batch_size, verbose=0, 
+                  validation_data=(X_val_split, y_val_split))
+        
+        # Tính toán loss trên tập validation
+        val_loss = model.evaluate(X_val_split, y_val_split, verbose=0)
+        return -val_loss  # Đảo ngược giá trị vì Bayesian Optimization tối đa hóa hàm mục tiêu
+    
+    # Định nghĩa không gian tìm kiếm tham số
+    pbounds = {
+        "epochs": (50, 300),
+        "batch_size": (16, 128),
+        "lstm_units": (10, 100),
+        "learning_rate": (0.0001, 0.1)
+    }
+    
+    optimizer = BayesianOptimization(f=objective, pbounds=pbounds, random_state=42)
+    optimizer.maximize(init_points=5, n_iter=15)
+    
+    best_params = optimizer.max["params"]
+    return [int(best_params["lstm_units"]), int(best_params["epochs"]), int(best_params["batch_size"]), best_params["learning_rate"]]
 # Với y dự đoán từ mô hình VAR đưa vào FFNN để train mô hình
+def find_parameter_for_ffnn(train_data, test_data, ratio_train_val, lag):
+    n_trials=20
+    def objective(epochs, batch_size, lstm_units, learning_rate):
+        epochs = int(epochs)
+        batch_size = int(batch_size)
+        lstm_units = int(lstm_units)
+        
+        # Khởi tạo mô hình
+        model = Sequential()
+        model.add(LSTM(lstm_units, activation='relu', input_shape=(lag, train_data.shape[1])))
+        model.add(Dense(train_data.shape[1]))
+        optimizer = Adam(learning_rate=learning_rate)
+        model.compile(optimizer=optimizer, loss='mse')
+        
+        X_train_split, X_val_split, y_train_split, y_val_split = devide_train_val(train_data, test_data, lag, ratio_train_val)
+        
+        # Huấn luyện mô hình với tập validation
+        model.fit(X_train_split, y_train_split, epochs=epochs, batch_size=batch_size, verbose=0, 
+                  validation_data=(X_val_split, y_val_split))
+        
+        # Tính toán loss trên tập validation
+        val_loss = model.evaluate(X_val_split, y_val_split, verbose=0)
+        return val_loss  # Không cần đảo ngược vì Random Search tối thiểu hóa hàm mục tiêu
+    
+    # Định nghĩa không gian tìm kiếm tham số
+    epochs_range = [50, 100, 150, 200, 250, 300]
+    batch_size_range = [16, 32, 64, 128]
+    lstm_units_range = [10, 20, 50, 100]
+    learning_rate_options = [0.0001, 0.001, 0.01, 0.1]
+    
+    best_loss = float("inf")
+    best_params = None
+    
+    for _ in range(n_trials):
+        epochs = random.choice(epochs_range)
+        batch_size = random.choice(batch_size_range)
+        lstm_units = random.choice(lstm_units_range)
+        learning_rate = random.choice(learning_rate_options)
+        
+        loss = objective(epochs, batch_size, lstm_units, learning_rate)
+        
+        if loss < best_loss:
+            best_loss = loss
+            best_params = [lstm_units, epochs, batch_size, learning_rate]
+    
+    return best_params
 def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_rate):
     
     varnn_model = Sequential()

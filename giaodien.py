@@ -137,6 +137,10 @@ def get_option_data_argumentation():
     option = st.sidebar.selectbox("Chọn thêm", ["Không",
                             "Có"])
     return option
+def get_option_optimze():
+    st.sidebar.header("Chọn phương pháp tối ưu tham số",  divider='rainbow')
+    option = st.sidebar.selectbox("Chọn",["Optuna","Random Search","Bayesian"])
+    return option
 def data_argumentation(data):
     op=get_option_data_argumentation()
     if op=="Không":
@@ -334,7 +338,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
     ratio_train_val=get_ratio_val()
     train_data,test_data= v.devide_train_test(df_chuan_hoa,ratio_train_test)
     lag=v.find_lag(train_data) 
-    
+    option_optimize=get_option_optimze()
     if model=="VAR":
         if "button_clicked" not in st.session_state:
             st.session_state.button_clicked = False
@@ -377,12 +381,18 @@ def train_model(df_chuan_hoa,scaler,op_data):
                     st.dataframe(data.reset_index(drop=True))
             
     elif model=="VARNN" or model=="FFNN":    
+    
         if model=="VARNN":            
             if "mse_varnn" not in st.session_state:
                 st.session_state.mse_varnn = None
             if st.sidebar.button("Huấn luyện mô hình"):
-                lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
- 
+                if option_optimize=="Optuna":
+                    lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
+                elif option_optimize=="Random Search":
+                    lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
+                else:
+                    lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
+
                 start_train_time = time.time()
                 history,latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_varnn, st.session_state.mae_varnn, st.session_state.cv_rmse_varnn, st.session_state.rmse_varnn,st.session_state.test_time =v.train_varnn(train_data,test_data,lag,epochs,lstm_unit,batch_size,learning_rate)
                 st.session_state.latest_prediction=latest_prediction           
@@ -466,7 +476,12 @@ def train_model(df_chuan_hoa,scaler,op_data):
             if "mse_ffnn" not in st.session_state:
                 st.session_state.mse_ffnn = None
             if st.sidebar.button("Huấn luyện mô hình"):
-                lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
+                if option_optimize=="Optuna":
+                    lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
+                elif option_optimize=="Random Search":
+                    lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
+                else:
+                    lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
  
                 start_train_time = time.time()
                 history,latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_ffnn, st.session_state.mae_ffnn, st.session_state.cv_rmse_ffnn, st.session_state.rmse_ffnn,st.session_state.test_time =v.train_ffnn(train_data,test_data,lag,epochs,lstm_unit,batch_size,learning_rate)
