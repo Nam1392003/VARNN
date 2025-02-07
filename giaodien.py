@@ -288,41 +288,46 @@ def data_preprocessing(data):
         st.dataframe(st.session_state["df_tr"])
         return st.session_state["df_tr"]
 
-def find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data):
+def find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data,option_optimize):
     lstm_unit = None
     epochs = None
     batch_size = None
     learning_rate = None
     
-    if ratio_train_test==0.2 and ratio_train_val==0.2:
-        with open("optimized\optimized_params_80_20.json", "r") as file:
-            loaded_params = json.load(file)
-    elif ratio_train_test==0.2 and ratio_train_val==0.25:
-        with open("optimized\optimized_params_80_20_75_25.json", "r") as file:
-            loaded_params = json.load(file)
-    elif ratio_train_test==0.2 and ratio_train_val==0.3:
-        with open("optimized\optimized_params_80_20_70_30.json", "r") as file:
-            loaded_params = json.load(file)
-    elif ratio_train_test==0.25 and ratio_train_val==0.2:
-        with open("optimized\optimized_params_75_25_80_20.json", "r") as file:
-            loaded_params = json.load(file)
-    elif ratio_train_test==0.25 and ratio_train_val==0.25:
-        with open("optimized\optimized_params_75_25_75_25.json", "r") as file:
-            loaded_params = json.load(file)
-    elif ratio_train_test==0.25 and ratio_train_val==0.3:
-        with open("optimized\optimized_params_75_25_70_30.json", "r") as file:
-            loaded_params = json.load(file)
-    elif ratio_train_test==0.3 and ratio_train_val==0.2:
-        with open("optimized\optimized_params_70_30_80_20.json", "r") as file:
-            loaded_params = json.load(file)
-    elif ratio_train_test==0.3 and ratio_train_val==0.25:
-        with open("optimized\optimized_params_70_30_75_25.json", "r") as file:
-            loaded_params = json.load(file)
-    elif ratio_train_test==0.3 and ratio_train_val==0.3:
-        with open("optimized\optimized_params_70_30_70_30.json", "r") as file:
-            loaded_params = json.load(file)
+    if option_optimize=="Optuna":
+        if ratio_train_test==0.2 and ratio_train_val==0.29:
+            with open("optimized\optimized_params_80_20.json", "r") as file:
+                loaded_params = json.load(file)
+        elif ratio_train_test==0.2 and ratio_train_val==0.25:
+            with open("optimized\optimized_params_80_20_75_25.json", "r") as file:
+                loaded_params = json.load(file)
+        elif ratio_train_test==0.2 and ratio_train_val==0.3:
+            with open("optimized\optimized_params_80_20_70_30.json", "r") as file:
+                loaded_params = json.load(file)
+        elif ratio_train_test==0.25 and ratio_train_val==0.2:
+            with open("optimized\optimized_params_75_25_80_20.json", "r") as file:
+                loaded_params = json.load(file)
+        elif ratio_train_test==0.25 and ratio_train_val==0.25:
+            with open("optimized\optimized_params_75_25_75_25.json", "r") as file:
+                loaded_params = json.load(file)
+        elif ratio_train_test==0.25 and ratio_train_val==0.3:
+            with open("optimized\optimized_params_75_25_70_30.json", "r") as file:
+                loaded_params = json.load(file)
+        elif ratio_train_test==0.3 and ratio_train_val==0.2:
+            with open("optimized\optimized_params_70_30_80_20.json", "r") as file:
+                loaded_params = json.load(file)
+        elif ratio_train_test==0.3 and ratio_train_val==0.25:
+            with open("optimized\optimized_params_70_30_75_25.json", "r") as file:
+                loaded_params = json.load(file)
+        elif ratio_train_test==0.3 and ratio_train_val==0.3:
+            with open("optimized\optimized_params_70_30_70_30.json", "r") as file:
+                loaded_params = json.load(file)
+        else:
+            lstm_unit, epochs, batch_size, learning_rate=v.find_parameter_for_ffnn_optuna(train_data,test_data,ratio_train_val,lag)
+    elif option_optimize=="Random Search":
+        lstm_unit, epochs, batch_size, learning_rate=v.find_parameter_for_ffnn_random(train_data,test_data,ratio_train_val,lag)
     else:
-        lstm_unit, epochs, batch_size, learning_rate=v.find_parameter_for_ffnn(train_data,test_data,ratio_train_val,lag)
+        lstm_unit, epochs, batch_size, learning_rate=v.find_parameter_for_ffnn_bayesian(train_data,test_data,ratio_train_val,lag)
     
     if lstm_unit is None or epochs is None or batch_size is None or learning_rate is None:
         lstm_unit=loaded_params[op_data].get("lstm_units")
@@ -386,14 +391,9 @@ def train_model(df_chuan_hoa,scaler,op_data):
             if "mse_varnn" not in st.session_state:
                 st.session_state.mse_varnn = None
             if st.sidebar.button("Huấn luyện mô hình"):
-                if option_optimize=="Optuna":
-                    lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
-                elif option_optimize=="Random Search":
-                    lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
-                else:
-                    lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
-
                 start_train_time = time.time()
+                lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data,option_optimize)
+                
                 history,latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_varnn, st.session_state.mae_varnn, st.session_state.cv_rmse_varnn, st.session_state.rmse_varnn,st.session_state.test_time =v.train_varnn(train_data,test_data,lag,epochs,lstm_unit,batch_size,learning_rate)
                 st.session_state.latest_prediction=latest_prediction           
                 end_train_time = time.time()
@@ -476,14 +476,8 @@ def train_model(df_chuan_hoa,scaler,op_data):
             if "mse_ffnn" not in st.session_state:
                 st.session_state.mse_ffnn = None
             if st.sidebar.button("Huấn luyện mô hình"):
-                if option_optimize=="Optuna":
-                    lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
-                elif option_optimize=="Random Search":
-                    lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
-                else:
-                    lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
- 
                 start_train_time = time.time()
+                lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data,option_optimize)
                 history,latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_ffnn, st.session_state.mae_ffnn, st.session_state.cv_rmse_ffnn, st.session_state.rmse_ffnn,st.session_state.test_time =v.train_ffnn(train_data,test_data,lag,epochs,lstm_unit,batch_size,learning_rate)
                 st.session_state.latest_prediction=latest_prediction           
                 end_train_time = time.time()

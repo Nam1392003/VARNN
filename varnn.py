@@ -195,7 +195,7 @@ def devide_train_val(train_data,test_data,lag,ratio):
     X_train, y_train, test_size=ratio, random_state=42)
     return [X_train_split, X_val_split, y_train_split, y_val_split]
 
-def find_parameter_for_ffnn(train_data,test_data, ratio_train_val,lag):
+def find_parameter_for_ffnn_optuna(train_data,test_data, ratio_train_val,lag):
     # Hàm mục tiêu cho Optuna
     def objective(trial):
         # Các tham số cho Optuna tối ưu
@@ -229,7 +229,7 @@ def find_parameter_for_ffnn(train_data,test_data, ratio_train_val,lag):
     batch_size=study.best_params["batch_size"]
     learning_rate=study.best_params["learning_rate"]
     return [lstm_unit,epochs,batch_size,learning_rate]
-def find_parameter_for_ffnn__bayesian(train_data,test_data, ratio_train_val,lag):
+def find_parameter_for_ffnn_bayesian(train_data,test_data, ratio_train_val,lag):
     def objective(epochs, batch_size, lstm_units, learning_rate):
         epochs = int(epochs)
         batch_size = int(batch_size)
@@ -266,7 +266,7 @@ def find_parameter_for_ffnn__bayesian(train_data,test_data, ratio_train_val,lag)
     best_params = optimizer.max["params"]
     return [int(best_params["lstm_units"]), int(best_params["epochs"]), int(best_params["batch_size"]), best_params["learning_rate"]]
 # Với y dự đoán từ mô hình VAR đưa vào FFNN để train mô hình
-def find_parameter_for_ffnn(train_data, test_data, ratio_train_val, lag):
+def find_parameter_for_ffnn_random(train_data, test_data, ratio_train_val, lag):
     n_trials=20
     def objective(epochs, batch_size, lstm_units, learning_rate):
         epochs = int(epochs)
