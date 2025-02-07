@@ -156,6 +156,7 @@ def find_lag(train_data):
 
 def train_VAR(train_data,test_data,lag):
     # Huấn luyện mô hình VAR
+    start_train_time = time.time()
     var_model = VAR(train_data)
     var_result = var_model.fit(maxlags=lag)
     pred_var = var_result.fittedvalues
@@ -164,21 +165,22 @@ def train_VAR(train_data,test_data,lag):
     # Tính toán các chỉ số đánh giá
     y_test = test_data.values  # Sử dụng toàn bộ tập kiểm tra
 
+
     #Du doan
     forecast = var_result.forecast(y_test, steps=1)
     # Tính MSE, MAE, MAPE giữa dự đoán và giá trị thực tế
     mse_var = mean_squared_error(y_test, y_test_pre)
     mae_var = mean_absolute_error(y_test, y_test_pre)
-    mape_var = mean_absolute_percentage_error(y_test, y_test_pre)
     rmse_var = np.sqrt(mse_var)
     mean_y_test = np.mean(y_test)
     cv_rmse_var = (rmse_var / mean_y_test) * 100
-
-    return [var_result,forecast,y_test,y_test_pre,mse_var,mae_var,cv_rmse_var,pred_var]
+    end_train_time = time.time()
+    test_time=end_train_time-start_train_time
+    return [forecast,y_test,y_test_pre,mse_var,mae_var,cv_rmse_var,rmse_var,test_time,pred_var]
 
 def prepare_data_for_ffnn(train_data,test_data,lag):
     X_train = np.array([train_data.values[i:i+lag] for i in range(len(train_data)-lag)])
-    var_result,forecast,y_test,y_test_pre,mse_var,mae_var,cv_rmse_var,pred_var = train_VAR(train_data,test_data,lag)
+    forecast,y_test,y_test_pre,mse_var,mae_var,cv_rmse_var,rmse_var,test_time,pred_var = train_VAR(train_data,test_data,lag)
     y_train=pred_var
     return [X_train,y_train]
 
@@ -271,6 +273,7 @@ def train_ffnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_ra
     X_test = np.array([test_data.values[i:i+lag] for i in range(len(test_data)-lag)])
     y_test = test_data.values[lag:]
 
+    start_train_time = time.time()
     y_test_pre = ffnn_model.predict(X_test)
     latest_data = y_test[-lag:].reshape(1, lag, y_test.shape[1])
     latest_prediction = ffnn_model.predict(latest_data)
@@ -281,4 +284,7 @@ def train_ffnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_ra
     rmse_ffnn = np.sqrt(mse_ffnn)
     mean_y_test = np.mean(y_test)
     cv_rmse_ffnn = (rmse_ffnn / mean_y_test) * 100
-    return [history,latest_prediction,y_test,y_test_pre,mse_ffnn, mae_ffnn, cv_rmse_ffnn]
+    end_train_time = time.time()
+    test_time=end_train_time-start_train_time
+    return [history,latest_prediction,y_test,y_test_pre,mse_ffnn, mae_ffnn, cv_rmse_ffnn,rmse_ffnn,test_time]
+

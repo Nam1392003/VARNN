@@ -18,7 +18,7 @@ st.sidebar.header("Thiết lập cấu hình", divider='rainbow')
 def get_model():
     st.sidebar.header("Chọn mô hình", divider='rainbow')
     model = st.sidebar.selectbox("Chọn mô hình:",
-                           ["VARNN",
+                           ["VARNN","VAR", "FFNN"
                             ]
                            )
     return model
@@ -342,7 +342,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
             st.session_state.button_clicked = True
         if st.session_state.button_clicked:
             start_train_time = time.time()
-            var_model, forecast, st.session_state.y_test, st.session_state.y_test_pre,st.session_state.mse_var,st.session_state.mae_var,st.session_state.cv_rmse_var,pred_var=v.train_VAR(train_data,test_data,lag)
+            forecast, st.session_state.y_test, st.session_state.y_test_pre,st.session_state.mse_var,st.session_state.mae_var,st.session_state.cv_rmse_var,st.session_state.rmse_var,st.session_state.test_time,pred_var=v.train_VAR(train_data,test_data,lag)
             st.session_state.forecast=forecast                     
             end_train_time = time.time()
             train_time=end_train_time-start_train_time
@@ -363,7 +363,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 y_test_pre=pd.DataFrame(y_test_pre)
                 y_test.columns=df_chuan_hoa.columns
                 y_test_pre.columns=df_chuan_hoa.columns
-            kiem_tra_mo_hinh(model,st.session_state.mse_var,st.session_state.mae_var,st.session_state.cv_rmse_var,y_test,y_test_pre)
+            kiem_tra_mo_hinh(model,st.session_state.mse_var,st.session_state.mae_var,st.session_state.cv_rmse_var,st.session_state.rmse_var,y_test,y_test_pre,st.session_state.test_time)
             if st.sidebar.button("Dự đoán"):
                 if op == "Không chuẩn hóa" or op == "zero-min":
                     data=pd.DataFrame(st.session_state.forecast)
@@ -377,8 +377,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
                     st.dataframe(data.reset_index(drop=True))
             
     elif model=="VARNN" or model=="FFNN":    
-        if model=="VARNN": 
-            
+        if model=="VARNN":            
             if "mse_varnn" not in st.session_state:
                 st.session_state.mse_varnn = None
             if st.sidebar.button("Huấn luyện mô hình"):
@@ -464,23 +463,18 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 
                 
         elif model=="FFNN":
-            if "button_clicked" not in st.session_state:
-                st.session_state.button_clicked = False
+            if "mse_ffnn" not in st.session_state:
+                st.session_state.mse_ffnn = None
             if st.sidebar.button("Huấn luyện mô hình"):
-                st.session_state.button_clicked = True
-            if st.session_state.button_clicked:
-                lstm_unit = st.session_state.lstm_unit
-                epochs = st.session_state.epochs
-                batch_size = st.session_state.batch_size
-
+                lstm_unit, epochs, batch_size,learning_rate = find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
+ 
                 start_train_time = time.time()
-
-                history,latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_ffnn, st.session_state.mae_ffnn, st.session_state.cv_rmse_ffnn=v.train_ffnn(train_data,test_data,lag,epochs,lstm_unit,batch_size)
-                st.session_state.latest_prediction=latest_prediction
+                history,latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_ffnn, st.session_state.mae_ffnn, st.session_state.cv_rmse_ffnn, st.session_state.rmse_ffnn,st.session_state.test_time =v.train_ffnn(train_data,test_data,lag,epochs,lstm_unit,batch_size,learning_rate)
+                st.session_state.latest_prediction=latest_prediction           
                 end_train_time = time.time()
-
-                train_time=end_train_time-start_train_time
                 
+                train_time=end_train_time-start_train_time
+
                 #Vẽ biểu đồ 2 đường loss và val_loss
                 st.header("Kết quả huấn luyện:", divider='rainbow')
                 # Vẽ biểu đồ loss/accuracy
@@ -493,12 +487,12 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 st.plotly_chart(fig_metrics)
                 #In ra các thông số train
                 st.write(f"Thời gian huấn luyện: {train_time:.2f} giây")
-                st.header("Các tham số tối ưu:", divider='rainbow')
+                
                 st.write(f"LSTM units:{lstm_unit}")
                 st.write(f"Epochs: {epochs}")
                 st.write(f"Batch size:{batch_size}")
+                st.write(f"Learning_rate:{learning_rate}")
                 st.write(f"Lag: {lag}")  
-                  
                 
                 if op == "Không chuẩn hóa":
                     y_test=pd.DataFrame(st.session_state.y_test)
@@ -512,6 +506,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
                     y_test_pre=pd.DataFrame(y_test_pre)
                     y_test.columns=df_chuan_hoa.columns
                     y_test_pre.columns=df_chuan_hoa.columns
+
                 else:
                     y_test=v.Inverse_zero_mean(st.session_state.y_test,scaler)
                     y_test_pre=v.Inverse_zero_mean(st.session_state.y_test_pre,scaler)
@@ -519,28 +514,37 @@ def train_model(df_chuan_hoa,scaler,op_data):
                     y_test_pre=pd.DataFrame(y_test_pre)
                     y_test.columns=df_chuan_hoa.columns
                     y_test_pre.columns=df_chuan_hoa.columns
-                kiem_tra_mo_hinh(model,st.session_state.mse_ffnn,st.session_state.mae_ffnn,st.session_state.cv_rmse_ffnn,y_test,y_test_pre)
-                if st.sidebar.button("Dự đoán"):
-                    if op == "Không chuẩn hóa":
-                        st.header("Kết quả dự đoán",divider="rainbow")
-                        data=pd.DataFrame(st.session_state.latest_prediction)
-                        data.columns=df_chuan_hoa.columns
-                
-                        st.dataframe(data.reset_index(drop=True))
-                    elif op == "min-max":
-                        st.header("Kết quả dự đoán",divider="rainbow")
-                        st.session_state.latest_prediction=scaler.inverse_transform(st.session_state.latest_prediction)
-                        data=pd.DataFrame(st.session_state.latest_prediction)
-                        data.columns=df_chuan_hoa.columns
-                
-                        st.dataframe(data.reset_index(drop=True))
-                    else:
-                        st.header("Kết quả dự đoán",divider="rainbow")
-                        st.session_state.latest_prediction=v.Inverse_zero_mean(st.session_state.latest_prediction,scaler)
-                        data=pd.DataFrame(st.session_state.latest_prediction)
-                        data.columns=df_chuan_hoa.columns
-                
-                        st.dataframe(data.reset_index(drop=True))
+                st.session_state.y_test=y_test
+                st.session_state.y_test_pre=y_test_pre
+            mse=st.session_state.mse_ffnn
+            if mse is None:    
+                pass
+            else:
+                kiem_tra_mo_hinh(model,st.session_state.mse_ffnn,st.session_state.mae_ffnn,st.session_state.cv_rmse_ffnn, st.session_state.rmse_ffnn,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.test_time)
+            if st.sidebar.button("Dự đoán"):
+                if op == "Không chuẩn hóa":
+                    st.header("Kết quả dự đoán",divider="rainbow")
+                    data=pd.DataFrame(st.session_state.latest_prediction)
+                    data.columns=df_chuan_hoa.columns
+            
+                    st.dataframe(data.reset_index(drop=True))
+                elif op == "min-max":
+                    st.header("Kết quả dự đoán",divider="rainbow")
+                    st.session_state.latest_prediction=scaler.inverse_transform(st.session_state.latest_prediction)
+                    data=pd.DataFrame(st.session_state.latest_prediction)
+                    data.columns=df_chuan_hoa.columns
+            
+                    st.dataframe(data.reset_index(drop=True))
+                else:
+                    st.header("Kết quả dự đoán",divider="rainbow")
+                    st.session_state.latest_prediction=v.Inverse_zero_mean(st.session_state.latest_prediction,scaler)
+                    data=pd.DataFrame(st.session_state.latest_prediction)
+                    data.columns=df_chuan_hoa.columns
+            
+                    st.dataframe(data.reset_index(drop=True))
+                        
+            else:
+                pass
 def get_option_kiem_tra():
     display_option = st.sidebar.selectbox("Chọn cách kiem tra", ["khong","kiem tra"],key="display_option_data_augumentation")    
     return display_option
