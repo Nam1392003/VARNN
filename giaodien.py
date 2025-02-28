@@ -9,6 +9,7 @@ import varnn as v
 import json
 import time
 import plotly.graph_objs as go
+
 # Thiết lập tiêu đề ứng dụng
 st.title("Ứng dụng Dự đoán Chuỗi Thời Gian đa biến")
 
@@ -18,7 +19,7 @@ st.sidebar.header("Thiết lập cấu hình", divider='rainbow')
 def get_model():
     st.sidebar.header("Chọn mô hình", divider='rainbow')
     model = st.sidebar.selectbox("Chọn mô hình:",
-                           ["VARNN","VAR", "FFNN"
+                           ["VARNN","VAR", "FFNN",'DeepVar'
                             ]
                            )
     return model
@@ -337,6 +338,19 @@ def find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_va
 
     return lstm_unit, epochs, batch_size, learning_rate
 
+def find_hyperparameter_deepVar(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data):
+    hidden_dim = None
+    num_layers = None
+    epochs= None
+    lr = None
+    
+    
+    hidden_dim,num_layers,epochs,lr=v.find_parameter_for_deepvar(train_data,test_data,ratio_train_val,lag)
+    
+    
+
+    return hidden_dim,num_layers,epochs,lr
+
 def train_model(df_chuan_hoa,scaler,op_data):  
     model=get_model()
     ratio_train_test=get_ratio_train_test()
@@ -385,7 +399,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
             
                     st.dataframe(data.reset_index(drop=True))
             
-    elif model=="VARNN" or model=="FFNN":    
+    elif model=="VARNN" or model=="FFNN" or model=='DeepVar':    
     
         if model=="VARNN":            
             if "mse_varnn" not in st.session_state:
@@ -530,6 +544,80 @@ def train_model(df_chuan_hoa,scaler,op_data):
                 pass
             else:
                 kiem_tra_mo_hinh(model,st.session_state.mse_ffnn,st.session_state.mae_ffnn,st.session_state.cv_rmse_ffnn, st.session_state.rmse_ffnn,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.test_time)
+            if st.sidebar.button("Dự đoán"):
+                if op == "Không chuẩn hóa":
+                    st.header("Kết quả dự đoán",divider="rainbow")
+                    data=pd.DataFrame(st.session_state.latest_prediction)
+                    data.columns=df_chuan_hoa.columns
+            
+                    st.dataframe(data.reset_index(drop=True))
+                elif op == "min-max":
+                    st.header("Kết quả dự đoán",divider="rainbow")
+                    st.session_state.latest_prediction=scaler.inverse_transform(st.session_state.latest_prediction)
+                    data=pd.DataFrame(st.session_state.latest_prediction)
+                    data.columns=df_chuan_hoa.columns
+            
+                    st.dataframe(data.reset_index(drop=True))
+                else:
+                    st.header("Kết quả dự đoán",divider="rainbow")
+                    st.session_state.latest_prediction=v.Inverse_zero_mean(st.session_state.latest_prediction,scaler)
+                    data=pd.DataFrame(st.session_state.latest_prediction)
+                    data.columns=df_chuan_hoa.columns
+            
+                    st.dataframe(data.reset_index(drop=True))
+                        
+            else:
+                pass
+        elif model=='DeepVar':
+            if "mse_deepVar" not in st.session_state:
+                st.session_state.mse_deepVar = None
+            if st.sidebar.button("Huấn luyện mô hình"):
+                hidden_dim,num_layers,epochs,lr = find_hyperparameter_deepVar(train_data,test_data,lag,ratio_train_test,ratio_train_val,op_data)
+                
+
+                start_train_time = time.time()
+                latest_prediction,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.mse_deepVar, st.session_state.mae_deepVar, st.session_state.cv_rmse_deepVar, st.session_state.rmse_deepVar,st.session_state.test_time =v.train_deepvar(train_data,test_data,lag,hidden_dim,num_layers,epochs,lr)
+                st.session_state.latest_prediction=latest_prediction           
+                end_train_time = time.time()
+                
+                train_time=end_train_time-start_train_time
+
+                
+                st.write(f"Thời gian huấn luyện: {train_time:.2f} giây")
+                
+                st.write(f"LSTM units:{hidden_dim}")
+                st.write(f"num_layers: {num_layers}")
+                st.write(f"epochs:{epochs}")
+                st.write(f"Learning_rate:{lr}")
+                st.write(f"Lag: {lag}")  
+                
+                if op == "Không chuẩn hóa":
+                    y_test=pd.DataFrame(st.session_state.y_test)
+                    y_test_pre=pd.DataFrame(st.session_state.y_test_pre)
+                    y_test.columns=df_chuan_hoa.columns
+                    y_test_pre.columns=df_chuan_hoa.columns
+                elif op=="min-max":       
+                    y_test=scaler.inverse_transform(st.session_state.y_test)
+                    y_test_pre=scaler.inverse_transform(st.session_state.y_test_pre)
+                    y_test=pd.DataFrame(y_test)
+                    y_test_pre=pd.DataFrame(y_test_pre)
+                    y_test.columns=df_chuan_hoa.columns
+                    y_test_pre.columns=df_chuan_hoa.columns
+
+                else:
+                    y_test=v.Inverse_zero_mean(st.session_state.y_test,scaler)
+                    y_test_pre=v.Inverse_zero_mean(st.session_state.y_test_pre,scaler)
+                    y_test=pd.DataFrame(y_test)
+                    y_test_pre=pd.DataFrame(y_test_pre)
+                    y_test.columns=df_chuan_hoa.columns
+                    y_test_pre.columns=df_chuan_hoa.columns
+                st.session_state.y_test=y_test
+                st.session_state.y_test_pre=y_test_pre
+            mse=st.session_state.mse_deepVar
+            if mse is None:    
+                pass
+            else:
+                kiem_tra_mo_hinh(model,st.session_state.mse_deepVar,st.session_state.mae_deepVar,st.session_state.cv_rmse_deepVar, st.session_state.deepVar,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.test_time)
             if st.sidebar.button("Dự đoán"):
                 if op == "Không chuẩn hóa":
                     st.header("Kết quả dự đoán",divider="rainbow")

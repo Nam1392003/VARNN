@@ -15,7 +15,9 @@ from tensorflow.keras.optimizers import Adam
 import time
 from bayes_opt import BayesianOptimization
 import random
-
+import torch
+import torch.nn as nn
+import torch.optim as optim
 #Biến đổi cột Date Time
 def tranformation(data_target):
     if data_target is None:
@@ -370,4 +372,87 @@ def train_ffnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_ra
     end_train_time = time.time()
     test_time=end_train_time-start_train_time
     return [history,latest_prediction,y_test,y_test_pre,mse_ffnn, mae_ffnn, cv_rmse_ffnn,rmse_ffnn,test_time]
+class DeepVAR(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_layers, output_dim):
+        super(DeepVAR, self).__init__()
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, output_dim)
+    
+    def forward(self, x):
+        lstm_out, _ = self.lstm(x)
+        return self.fc(lstm_out[:, -1, :])
 
+def train_model(X_train, y_train, X_val, y_val, input_dim, hidden_dim, num_layers, epochs, lr):
+    model = DeepVAR(input_dim, hidden_dim, num_layers, input_dim)
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    
+    # Chuyển DataFrame thành NumPy array trước khi tạo tensor
+    X_train = X_train.to_numpy() if hasattr(X_train, 'to_numpy') else X_train
+    y_train = y_train.to_numpy() if hasattr(y_train, 'to_numpy') else y_train
+    X_val = X_val.to_numpy() if hasattr(X_val, 'to_numpy') else X_val
+    y_val = y_val.to_numpy() if hasattr(y_val, 'to_numpy') else y_val
+    
+
+    X_train_torch = torch.tensor(X_train, dtype=torch.float32)
+    y_train_torch = torch.tensor(y_train, dtype=torch.float32)
+    X_val_torch = torch.tensor(X_val, dtype=torch.float32)
+    y_val_torch = torch.tensor(y_val, dtype=torch.float32)
+    
+    for epoch in range(epochs):
+        model.train()
+        optimizer.zero_grad()
+        output = model(X_train_torch)
+        loss = criterion(output, y_train_torch)
+        loss.backward()
+        optimizer.step()
+    
+    model.eval()
+    with torch.no_grad():
+        val_output = model(X_val_torch)
+        val_loss = criterion(val_output, y_val_torch).item()
+    
+    return val_loss, model
+
+def find_parameter_for_deepvar(train_data, test_data, ratio_train_val, lag):
+    def objective(trial):
+        hidden_dim = trial.suggest_int("hidden_dim", 32, 128)
+        num_layers = trial.suggest_int("num_layers", 1, 4)
+        lr = trial.suggest_categorical("lr", [0.0001, 0.001, 0.01, 0.1])
+        epochs = trial.suggest_int("epochs", 50, 300)
+        
+        X_train_split, X_val_split, y_train_split, y_val_split = devide_train_val(train_data, test_data, lag, ratio_train_val)
+        val_loss, _ = train_model(X_train_split, y_train_split, X_val_split, y_val_split, X_train_split.shape[2], hidden_dim, num_layers, epochs, lr)
+        return val_loss
+    
+    study = optuna.create_study(direction="minimize")
+    study.optimize(objective, n_trials=20)
+    
+    best_params = study.best_params
+    return [best_params["hidden_dim"], best_params["num_layers"], best_params["epochs"], best_params["lr"]]
+
+def train_deepvar(train_data, test_data, lag, hidden_dim, num_layers, epochs, lr):
+    X_train,y_train=prepare_data_for_ffnn(train_data,test_data,lag)
+    
+    X_test = np.array([test_data.values[i:i+lag] for i in range(len(test_data)-lag)])
+    y_test = test_data.values[lag:]
+    
+    start_train_time = time.time()
+    _, deepvar_model = train_model(X_train, y_train, X_test, y_test, X_train.shape[2], hidden_dim, num_layers, epochs, lr)
+    
+    deepvar_model.eval()
+    with torch.no_grad():
+        X_test_torch = torch.tensor(X_test, dtype=torch.float32)
+        y_test_pre = deepvar_model(X_test_torch).numpy()
+        
+        latest_data = torch.tensor(X_test[-1].reshape(1, lag, X_test.shape[2]), dtype=torch.float32)
+        latest_prediction = deepvar_model(latest_data).numpy()
+    mse = mean_squared_error(y_test, y_test_pre)
+    mae = mean_absolute_error(y_test, y_test_pre)
+    rmse = np.sqrt(mse)
+    mean_y_test = np.mean(y_test)
+    cv_rmse = (rmse / mean_y_test) * 100
+    end_train_time = time.time()
+    test_time = end_train_time - start_train_time
+    
+    return [latest_prediction, y_test, y_test_pre, mse, mae, cv_rmse, rmse, test_time]
