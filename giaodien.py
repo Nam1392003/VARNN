@@ -617,7 +617,7 @@ def train_model(df_chuan_hoa,scaler,op_data):
             if mse is None:    
                 pass
             else:
-                kiem_tra_mo_hinh(model,st.session_state.mse_deepVar,st.session_state.mae_deepVar,st.session_state.cv_rmse_deepVar, st.session_state.deepVar,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.test_time)
+                kiem_tra_mo_hinh(model,st.session_state.mse_deepVar,st.session_state.mae_deepVar,st.session_state.cv_rmse_deepVar, st.session_state.rmse_deepVar,st.session_state.y_test,st.session_state.y_test_pre,st.session_state.test_time)
             if st.sidebar.button("Dự đoán"):
                 if op == "Không chuẩn hóa":
                     st.header("Kết quả dự đoán",divider="rainbow")
