@@ -143,7 +143,7 @@ def find_lag(train_data):
     lag_aic_values = []
 
     # Khởi tạo các giá trị lag để thử nghiệm (ở đây từ 1 đến 15)
-    lags = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    lags = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,16,18,19,20,21,22,23,24,25,26,27,28]
 
     # Chạy vòng lặp để tính AIC cho từng độ trễ
     for lag in lags:

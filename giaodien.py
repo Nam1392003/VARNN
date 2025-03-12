@@ -296,45 +296,13 @@ def find_hyperparameter(train_data,test_data,lag,ratio_train_test,ratio_train_va
     learning_rate = None
     
     if option_optimize=="Optuna":
-        if ratio_train_test==0.2 and ratio_train_val==0.29:
-            with open("optimized\optimized_params_80_20.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.2 and ratio_train_val==0.25:
-            with open("optimized\optimized_params_80_20_75_25.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.2 and ratio_train_val==0.3:
-            with open("optimized\optimized_params_80_20_70_30.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.25 and ratio_train_val==0.2:
-            with open("optimized\optimized_params_75_25_80_20.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.25 and ratio_train_val==0.25:
-            with open("optimized\optimized_params_75_25_75_25.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.25 and ratio_train_val==0.3:
-            with open("optimized\optimized_params_75_25_70_30.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.3 and ratio_train_val==0.2:
-            with open("optimized\optimized_params_70_30_80_20.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.3 and ratio_train_val==0.25:
-            with open("optimized\optimized_params_70_30_75_25.json", "r") as file:
-                loaded_params = json.load(file)
-        elif ratio_train_test==0.3 and ratio_train_val==0.3:
-            with open("optimized\optimized_params_70_30_70_30.json", "r") as file:
-                loaded_params = json.load(file)
-        else:
-            lstm_unit, epochs, batch_size, learning_rate=v.find_parameter_for_ffnn_optuna(train_data,test_data,ratio_train_val,lag)
+        lstm_unit, epochs, batch_size, learning_rate=v.find_parameter_for_ffnn_optuna(train_data,test_data,ratio_train_val,lag)
     elif option_optimize=="Random Search":
         lstm_unit, epochs, batch_size, learning_rate=v.find_parameter_for_ffnn_random(train_data,test_data,ratio_train_val,lag)
     else:
         lstm_unit, epochs, batch_size, learning_rate=v.find_parameter_for_ffnn_bayesian(train_data,test_data,ratio_train_val,lag)
     
-    if lstm_unit is None or epochs is None or batch_size is None or learning_rate is None:
-        lstm_unit=loaded_params[op_data].get("lstm_units")
-        epochs=loaded_params[op_data].get("epochs")
-        batch_size=loaded_params[op_data].get("batch_size")
-        learning_rate=loaded_params[op_data].get("learning_rate")
+    
 
     return lstm_unit, epochs, batch_size, learning_rate
 
