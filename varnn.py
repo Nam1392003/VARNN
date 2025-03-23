@@ -7,11 +7,13 @@ from sklearn.model_selection import train_test_split
 from statsmodels.tsa.api import VAR
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM
+from optuna.integration import KerasPruningCallback
 import optuna
 from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolute_percentage_error
 from sklearn.preprocessing import MinMaxScaler
 from scipy.interpolate import interp1d
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
 import time
 from bayes_opt import BayesianOptimization
 import random
@@ -143,7 +145,7 @@ def find_lag(train_data):
     lag_aic_values = []
 
     # Khởi tạo các giá trị lag để thử nghiệm (ở đây từ 1 đến 15)
-    lags = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,16,18,19,20,21,22,23,24,25,26,27,28]
+    lags = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,16,18,19,20,21,22,23,24,25]
 
     # Chạy vòng lặp để tính AIC cho từng độ trễ
     for lag in lags:
@@ -215,6 +217,7 @@ def find_parameter_for_ffnn_optuna(train_data,test_data, ratio_train_val,lag):
 
         X_train_split, X_val_split, y_train_split, y_val_split=devide_train_val(train_data,test_data,lag,ratio_train_val)
         # Huấn luyện mô hình với tập validation
+        early_stopping = EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True)
         model.fit(X_train_split, y_train_split, epochs=epochs, batch_size=batch_size, verbose=0, 
               validation_data=(X_val_split, y_val_split))
 
@@ -231,15 +234,20 @@ def find_parameter_for_ffnn_optuna(train_data,test_data, ratio_train_val,lag):
     batch_size=study.best_params["batch_size"]
     learning_rate=study.best_params["learning_rate"]
     return [lstm_unit,epochs,batch_size,learning_rate]
-def find_parameter_for_ffnn_bayesian(train_data,test_data, ratio_train_val,lag):
-    def objective(epochs, batch_size, lstm_units, learning_rate):
+def find_parameter_for_ffnn_bayesian(train_data, test_data, ratio_train_val, lag):
+    def objective(epochs, batch_size_idx, lstm_units, learning_rate_idx):
         epochs = int(epochs)
-        batch_size = int(batch_size)
         lstm_units = int(lstm_units)
+        
+        batch_size_list = [16, 32, 64, 128]
+        learning_rate_list = [0.00001, 0.0001, 0.001, 0.01, 0.1]
+        
+        batch_size = batch_size_list[int(batch_size_idx)]
+        learning_rate = learning_rate_list[int(learning_rate_idx)]
         
         # Khởi tạo mô hình
         model = Sequential()
-        model.add(LSTM(lstm_units, activation='relu', input_shape=(lag, train_data.shape[1])))
+        model.add(LSTM(lstm_units, activation='sigmoid', input_shape=(lag, train_data.shape[1])))
         model.add(Dense(train_data.shape[1]))
         optimizer = Adam(learning_rate=learning_rate)
         model.compile(optimizer=optimizer, loss='mse')
@@ -257,17 +265,21 @@ def find_parameter_for_ffnn_bayesian(train_data,test_data, ratio_train_val,lag):
     # Định nghĩa không gian tìm kiếm tham số
     pbounds = {
         "epochs": (50, 300),
-        "batch_size": (16, 128),
+        "batch_size_idx": (0, 3),  # Chỉ số của batch_size_list
         "lstm_units": (10, 100),
-        "learning_rate": (0.0001, 0.1)
+        "learning_rate_idx": (0, 4)  # Chỉ số của learning_rate_list
     }
     
     optimizer = BayesianOptimization(f=objective, pbounds=pbounds, random_state=42)
     optimizer.maximize(init_points=5, n_iter=15)
     
     best_params = optimizer.max["params"]
-    return [int(best_params["lstm_units"]), int(best_params["epochs"]), int(best_params["batch_size"]), best_params["learning_rate"]]
-# Với y dự đoán từ mô hình VAR đưa vào FFNN để train mô hình
+    
+    best_batch_size = [16, 32, 64, 128][int(best_params["batch_size_idx"])]
+    best_learning_rate = [0.00001, 0.0001, 0.001, 0.01, 0.1][int(best_params["learning_rate_idx"])]
+    
+    return [int(best_params["lstm_units"]), int(best_params["epochs"]), best_batch_size, best_learning_rate]
+
 def find_parameter_for_ffnn_random(train_data, test_data, ratio_train_val, lag):
     n_trials=20
     def objective(epochs, batch_size, lstm_units, learning_rate):
