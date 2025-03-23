@@ -210,7 +210,7 @@ def find_parameter_for_ffnn_optuna(train_data,test_data, ratio_train_val,lag):
 
         # Khởi tạo mô hình 
         model = Sequential()
-        model.add(LSTM(lstm_units, activation='relu', input_shape=(lag, train_data.shape[1])))
+        model.add(LSTM(lstm_units, activation='sigmoid', input_shape=(lag, train_data.shape[1])))
         model.add(Dense(train_data.shape[1]))
         optimizer = Adam(learning_rate=learning_rate)
         model.compile(optimizer=optimizer, loss='mse')
@@ -289,7 +289,7 @@ def find_parameter_for_ffnn_random(train_data, test_data, ratio_train_val, lag):
         
         # Khởi tạo mô hình
         model = Sequential()
-        model.add(LSTM(lstm_units, activation='relu', input_shape=(lag, train_data.shape[1])))
+        model.add(LSTM(lstm_units, activation='sigmoid', input_shape=(lag, train_data.shape[1])))
         model.add(Dense(train_data.shape[1]))
         optimizer = Adam(learning_rate=learning_rate)
         model.compile(optimizer=optimizer, loss='mse')
@@ -329,7 +329,7 @@ def find_parameter_for_ffnn_random(train_data, test_data, ratio_train_val, lag):
 def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_rate):
     
     varnn_model = Sequential()
-    varnn_model.add(LSTM(lstm_unit, activation='relu', input_shape=(lag, train_data.shape[1])))
+    varnn_model.add(LSTM(lstm_unit, activation='sigmoid', input_shape=(lag, train_data.shape[1])))
     varnn_model.add(Dense(train_data.shape[1]))
     optimizer = Adam(learning_rate=learning_rate)
     varnn_model.compile(optimizer=optimizer, loss='mse')
