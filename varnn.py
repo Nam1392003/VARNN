@@ -217,7 +217,7 @@ def find_parameter_for_ffnn_optuna(train_data,test_data, ratio_train_val,lag):
 
         X_train_split, X_val_split, y_train_split, y_val_split=devide_train_val(train_data,test_data,lag,ratio_train_val)
         # Huấn luyện mô hình với tập validation
-        early_stopping = EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True)
+
         model.fit(X_train_split, y_train_split, epochs=epochs, batch_size=batch_size, verbose=0, 
               validation_data=(X_val_split, y_val_split))
 
