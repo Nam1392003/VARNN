@@ -14,6 +14,8 @@ from sklearn.preprocessing import MinMaxScaler
 from scipy.interpolate import interp1d
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping
+import tensorflow as tf
+from tensorflow.keras.layers import Layer
 import time
 from bayes_opt import BayesianOptimization
 import random
@@ -210,7 +212,7 @@ def find_parameter_for_ffnn_optuna(train_data,test_data, ratio_train_val,lag):
 
         # Khởi tạo mô hình 
         model = Sequential()
-        model.add(LSTM(lstm_units, activation='sigmoid', input_shape=(lag, train_data.shape[1])))
+        model.add(LSTM(lstm_units, activation=CustomRelu(), input_shape=(lag, train_data.shape[1])))
         model.add(Dense(train_data.shape[1]))
         optimizer = Adam(learning_rate=learning_rate)
         model.compile(optimizer=optimizer, loss='mse')
@@ -247,7 +249,7 @@ def find_parameter_for_ffnn_bayesian(train_data, test_data, ratio_train_val, lag
         
         # Khởi tạo mô hình
         model = Sequential()
-        model.add(LSTM(lstm_units, activation='sigmoid', input_shape=(lag, train_data.shape[1])))
+        model.add(LSTM(lstm_units, activation=CustomRelu(), input_shape=(lag, train_data.shape[1])))
         model.add(Dense(train_data.shape[1]))
         optimizer = Adam(learning_rate=learning_rate)
         model.compile(optimizer=optimizer, loss='mse')
@@ -289,7 +291,7 @@ def find_parameter_for_ffnn_random(train_data, test_data, ratio_train_val, lag):
         
         # Khởi tạo mô hình
         model = Sequential()
-        model.add(LSTM(lstm_units, activation='sigmoid', input_shape=(lag, train_data.shape[1])))
+        model.add(LSTM(lstm_units, activation=CustomRelu(), input_shape=(lag, train_data.shape[1])))
         model.add(Dense(train_data.shape[1]))
         optimizer = Adam(learning_rate=learning_rate)
         model.compile(optimizer=optimizer, loss='mse')
@@ -326,10 +328,16 @@ def find_parameter_for_ffnn_random(train_data, test_data, ratio_train_val, lag):
             best_params = [lstm_units, epochs, batch_size, learning_rate]
     
     return best_params
+class CustomRelu(Layer):
+    def __init__(self):
+        super(CustomRelu,self).__init__()
+        self.alpha=tf.Variable(0.0, trainable=True,dtype=tf.float32)
+    def call(self,inputs):
+        return tf.maximum(0.0, inputs + self.alpha)
 def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_rate):
     
     varnn_model = Sequential()
-    varnn_model.add(LSTM(lstm_unit, activation='sigmoid', input_shape=(lag, train_data.shape[1])))
+    varnn_model.add(LSTM(lstm_unit, activation=CustomRelu(), input_shape=(lag, train_data.shape[1])))
     varnn_model.add(Dense(train_data.shape[1]))
     optimizer = Adam(learning_rate=learning_rate)
     varnn_model.compile(optimizer=optimizer, loss='mse')
@@ -357,7 +365,7 @@ def train_varnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_r
 
 def train_ffnn(train_data,test_data, lag,epochs,lstm_unit,batch_size,learning_rate):
     ffnn_model = Sequential()
-    ffnn_model.add(LSTM(lstm_unit, activation='relu', input_shape=(lag, train_data.shape[1])))
+    ffnn_model.add(LSTM(lstm_unit, activation=CustomRelu(), input_shape=(lag, train_data.shape[1])))
     ffnn_model.add(Dense(train_data.shape[1]))
     optimizer = Adam(learning_rate=learning_rate)
     ffnn_model.compile(optimizer=optimizer, loss='mse')
@@ -468,3 +476,4 @@ def train_deepvar(train_data, test_data, lag, hidden_dim, num_layers, epochs, lr
     test_time = end_train_time - start_train_time
     
     return [latest_prediction, y_test, y_test_pre, mse, mae, cv_rmse, rmse, test_time]
+

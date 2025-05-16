@@ -1,0 +1,4 @@
+[{"epochs": 300, "batch_size": 16, "lstm_units": 50,"learning_rate":0.01},
+{"epochs": 300, "batch_size":16 , "lstm_units": 50,"learning_rate":0.001},
+{"epochs": 300, "batch_size": 128, "lstm_units": 16,"learning_rate":0.001},
+{"epochs": 250, "batch_size": 64, "lstm_units": 97,"learning_rate":0.001}]
